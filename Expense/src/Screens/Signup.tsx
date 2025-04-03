@@ -30,23 +30,29 @@ const Signup: React.FC = () => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
+  const [phone, setPhone] = useState('');
 
   const sendOtp = async () => {
     try {
-      await axios.post('http://10.0.2.2:5000/send-otp', {email});
+      await axios.post('http://192.168.200.167:5000/send-otp', {email});
       Alert.alert('OTP Sent', 'Check your email for the OTP');
+      console.log('executed');
       setIsOtpSent(true);
     } catch (error) {
       Alert.alert('Error', 'Failed to send OTP');
+      console.log(error);
     }
   };
 
   const verifyOtp = async () => {
     try {
-      const response = await axios.post('http://10.0.2.2:5000/verify-otp', {
-        email,
-        otp: Number(otp),
-      });
+      const response = await axios.post(
+        'http://192.168.200.167:5000/verify-otp',
+        {
+          email,
+          otp: Number(otp),
+        },
+      );
 
       if (response.status === 200) {
         const userCredential = await createUserWithEmailAndPassword(
@@ -56,7 +62,7 @@ const Signup: React.FC = () => {
         );
         const user = userCredential.user;
 
-        await createUser(user.uid, name, email, '', '');
+        await createUser(user.uid, name, email, phone, '');
 
         await AsyncStorage.setItem('userId', user.uid);
         await AsyncStorage.setItem('email', email);
@@ -89,6 +95,13 @@ const Signup: React.FC = () => {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        style={styles.input}
+      />
+      <Text style={styles.label}>Number</Text>
+      <TextInput
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="numeric"
         style={styles.input}
       />
 

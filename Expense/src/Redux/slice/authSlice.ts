@@ -1,18 +1,22 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Define the auth state type
 interface AuthState {
+  contacts: any;
   userId: string | null;
   email: string | null;
   loading: boolean;
 }
 
+// Load auth state from AsyncStorage
 export const loadAuthState = createAsyncThunk(
   'auth/loadAuthState',
   async () => {
     const userId = await AsyncStorage.getItem('userId');
     const email = await AsyncStorage.getItem('email');
 
+    // Ensure the return type is correct
     return userId && email ? {userId, email} : {userId: null, email: null};
   },
 );

@@ -9,6 +9,10 @@ import Login from './src/Screens/Login';
 import Signup from './src/Screens/Signup';
 import Home from './src/Screens/Home';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import GroupScreen from './src/Screens/GroupScrren';
+import CreateGroup from './src/Screens/CreateGroup';
+
 const Stack = createStackNavigator();
 
 const AppContent: React.FC = () => {
@@ -38,6 +42,8 @@ const AppContent: React.FC = () => {
             <Stack.Screen name="Signup" component={Signup} />
           </>
         )}
+        <Stack.Screen name="GroupScreen" component={GroupScreen} />
+        <Stack.Screen name="CreateGroup" component={CreateGroup} />
       </Stack.Navigator>
     </NavigationContainer>
   );

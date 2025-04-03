@@ -33,6 +33,7 @@ const AccountScreen: React.FC = () => {
 
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   useEffect(() => {
     if (userId) {
@@ -53,16 +54,19 @@ const AccountScreen: React.FC = () => {
         setName(userData?.name?.trim() ?? '');
         setEmail(userData?.email?.trim() ?? '');
         setPhotoURL(userData?.profilePicture?.trim() ?? null);
+        setPhone(userData?.phone?.trim() ?? '');
       } else {
         setName('');
         setEmail('');
         setPhotoURL(null);
+        setPhone('');
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
       setName('');
       setEmail('');
       setPhotoURL(null);
+      setPhone('');
     }
   };
 
@@ -81,10 +85,12 @@ const AccountScreen: React.FC = () => {
         name,
         email,
         profilePicture: photoURL ?? '',
+        phone,
       });
 
       dispatch(login({userId, email}));
       await AsyncStorage.setItem('email', email);
+      await AsyncStorage.setItem('phone', phone);
 
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
@@ -96,8 +102,10 @@ const AccountScreen: React.FC = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+
       await AsyncStorage.removeItem('userId');
       await AsyncStorage.removeItem('email');
+      await AsyncStorage.removeItem('phone');
 
       dispatch(logout());
 
@@ -133,6 +141,13 @@ const AccountScreen: React.FC = () => {
         onChangeText={setEmail}
         placeholder="Email"
         keyboardType="email-address"
+      />
+      <TextInput
+        style={styles.input}
+        value={phone}
+        onChangeText={setPhone}
+        placeholder="Phone"
+        keyboardType="numeric"
       />
       <Button title="Update Profile" onPress={handleUpdateProfile} />
       <Button title="Logout" onPress={handleLogout} color="red" />

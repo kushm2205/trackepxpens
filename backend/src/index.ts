@@ -22,6 +22,7 @@ const transporter = nodemailer.createTransport({
 // API to send OTP via Email
 app.post("/send-otp", async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
+  console.log("otp");
   if (!email) {
     res.status(400).json({ message: "Email is required" });
     return;

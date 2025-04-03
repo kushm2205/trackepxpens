@@ -1,10 +1,11 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import GroupsScreen from '../Screens/GroupScreen';
+
 import FriendsScreen from './FriendsScreen';
 import ActivityScreen from './ActivityScreen';
 import AccountScreen from './AccountScreen';
+import GroupScrren from './GroupScrren';
 
 const Tab = createBottomTabNavigator();
 
@@ -36,7 +37,7 @@ const Home: React.FC = () => {
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
       })}>
-      <Tab.Screen name="Groups" component={GroupsScreen} />
+      <Tab.Screen name="Group" component={GroupScrren} />
       <Tab.Screen name="Friends" component={FriendsScreen} />
       <Tab.Screen name="Activity" component={ActivityScreen} />
       <Tab.Screen name="Account" component={AccountScreen} />

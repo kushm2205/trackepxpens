@@ -1,3 +1,4 @@
+import {getStorage} from '@react-native-firebase/storage';
 import {getApps, initializeApp} from 'firebase/app';
 import {
   getAuth,
@@ -27,8 +28,10 @@ const firebaseConfig = {
   databaseURL: 'https://expense-tracker-d353d.firebaseio.com',
 };
 
-const app = initializeApp(firebaseConfig);
+const app =
+  getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
+
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 export {

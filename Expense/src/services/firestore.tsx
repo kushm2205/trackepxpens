@@ -44,6 +44,7 @@ export const createGroup = async (
   groupName: string,
   createdBy: string,
   members: string[],
+  imageUrl: any,
 ) => {
   try {
     const groupRef = await addDoc(collection(db, 'groups'), {
@@ -136,3 +137,4 @@ export const updateUser = async (
     console.error('Error updating user:', error);
   }
 };
+export {db};
