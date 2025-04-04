@@ -8,12 +8,37 @@ import {RootState, AppDispatch, store} from './src/Redux/store';
 import Login from './src/Screens/Login';
 import Signup from './src/Screens/Signup';
 import Home from './src/Screens/Home';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GroupScreen from './src/Screens/GroupScrren';
 import CreateGroup from './src/Screens/CreateGroup';
 
-const Stack = createStackNavigator();
+// Define the root stack parameter list
+export type RootStackParamList = {
+  Login: undefined;
+  Signup: undefined;
+  Home: undefined;
+  GroupScreen: undefined;
+  CreateGroup: undefined;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
+
+// Auth stack - for screens when user is NOT logged in
+const AuthStack = () => (
+  <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Screen name="Login" component={Login} />
+    <Stack.Screen name="Signup" component={Signup} />
+  </Stack.Navigator>
+);
+
+// App stack - for screens when user IS logged in
+const AppStack = () => (
+  <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Screen name="Home" component={Home} />
+    <Stack.Screen name="GroupScreen" component={GroupScreen} />
+    <Stack.Screen name="CreateGroup" component={CreateGroup} />
+  </Stack.Navigator>
+);
 
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -33,18 +58,7 @@ const AppContent: React.FC = () => {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
-        {userId ? (
-          <Stack.Screen name="Home" component={Home} />
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="Signup" component={Signup} />
-          </>
-        )}
-        <Stack.Screen name="GroupScreen" component={GroupScreen} />
-        <Stack.Screen name="CreateGroup" component={CreateGroup} />
-      </Stack.Navigator>
+      {userId ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 };

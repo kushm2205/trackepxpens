@@ -10,7 +10,8 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import {db} from './firebase';
+import {db, storage, ref, uploadBytes, getDownloadURL} from './firebase';
+import {Platform} from 'react-native';
 //create a new user in a firestore
 export const createUser = async (
   userId: string,
@@ -137,4 +138,52 @@ export const updateUser = async (
     console.error('Error updating user:', error);
   }
 };
+
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dqx2mxtys/upload';
+const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
+export const uploadImage = async (uri: string, userId: string) => {
+  try {
+    const imageUri =
+      Platform.OS === 'android' ? uri : uri.replace('file://', '');
+
+    const formData = new FormData();
+    formData.append('file', {
+      uri: imageUri,
+      name: `image_${Date.now()}.jpg`, // Give a unique name
+      type: 'image/jpeg', // Ensure the correct type
+    });
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    // ✅ Upload to Cloudinary
+    const cloudinaryResponse = await fetch(CLOUDINARY_URL, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const cloudinaryData = await cloudinaryResponse.json();
+
+    if (!cloudinaryResponse.ok || !cloudinaryData.secure_url) {
+      console.error(
+        '❌ Cloudinary Upload Failed:',
+        await cloudinaryResponse.text(),
+      );
+      throw new Error('Cloudinary upload failed');
+    }
+
+    const imageUrl = cloudinaryData.secure_url;
+    console.log('✅ Cloudinary Upload URL:', imageUrl);
+
+    // ✅ Store Cloudinary URL in Firestore
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {profilePicture: imageUrl}, {merge: true});
+
+    console.log('✅ Cloudinary URL saved to Firestore');
+
+    return {cloudinaryUrl: imageUrl};
+  } catch (error) {
+    console.error('❌ Image upload error:', error);
+    return null;
+  }
+};
+
 export {db};

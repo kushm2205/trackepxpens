@@ -1,5 +1,5 @@
-import {getStorage} from '@react-native-firebase/storage';
-import {getApps, initializeApp} from 'firebase/app';
+import {Platform} from 'react-native';
+import {initializeApp, getApps} from 'firebase/app';
 import {
   getAuth,
   PhoneAuthProvider,
@@ -10,7 +10,7 @@ import {
   signInWithCredential,
 } from 'firebase/auth';
 import {getFirestore, setDoc, doc} from 'firebase/firestore';
-import {Platform} from 'react-native';
+import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage'; // Import storage functions
 
 const firebaseConfig = {
   apiKey:
@@ -31,12 +31,17 @@ const firebaseConfig = {
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
-
 const db = getFirestore(app);
+const storage = getStorage(app); // Initialize Firebase Storage
 const googleProvider = new GoogleAuthProvider();
+
 export {
   auth,
   db,
+  storage, // Export Firebase Storage
+  ref, // Export storage ref
+  uploadBytes, // Export uploadBytes
+  getDownloadURL, // Export getDownloadURL
   PhoneAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,

@@ -1,7 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {
   View,
-  Text,
   TextInput,
   Button,
   Image,
@@ -13,13 +12,13 @@ import {useDispatch, useSelector} from 'react-redux';
 import {RootState, AppDispatch} from '../Redux/store';
 import {logout, login} from '../Redux/slice/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {auth, db} from '../services/firebase';
-import {doc, getDoc, updateDoc} from 'firebase/firestore';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {auth} from '../services/firebase';
 import {signOut} from 'firebase/auth';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../types/types';
+import {uploadImage, getUser, updateUser} from '../services/firestore';
+import {launchImageLibrary} from 'react-native-image-picker';
 
 type AccountScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -30,11 +29,14 @@ const AccountScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<AccountScreenNavigationProp>();
   const {userId} = useSelector((state: RootState) => state.auth);
+  // Access group data if necessary
+  const groupData = useSelector((state: RootState) => state.Group);
 
-  const [name, setName] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
+
   useEffect(() => {
     if (userId) {
       fetchUserData();
@@ -45,52 +47,66 @@ const AccountScreen: React.FC = () => {
     if (!userId) return;
 
     try {
-      const userRef = doc(db, 'users', userId);
-      const userSnap = await getDoc(userRef);
-
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-
-        setName(userData?.name?.trim() ?? '');
-        setEmail(userData?.email?.trim() ?? '');
-        setPhotoURL(userData?.profilePicture?.trim() ?? null);
-        setPhone(userData?.phone?.trim() ?? '');
-      } else {
-        setName('');
-        setEmail('');
-        setPhotoURL(null);
-        setPhone('');
+      const userData = await getUser(userId);
+      if (userData) {
+        setName(userData.name ?? '');
+        setEmail(userData.email ?? '');
+        setPhotoURL(userData.profilePicture ?? null);
+        setPhone(userData.phone ?? '');
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      setName('');
-      setEmail('');
-      setPhotoURL(null);
-      setPhone('');
     }
   };
 
   const pickImage = async () => {
-    const result = await launchImageLibrary({mediaType: 'photo'});
-    if (!result.didCancel && result.assets && result.assets.length > 0) {
-      setPhotoURL(result.assets[0].uri ?? null);
+    try {
+      launchImageLibrary({mediaType: 'photo'}, async response => {
+        if (response.didCancel) return;
+        if (response.errorCode) {
+          Alert.alert('Error', 'Failed to pick an image.');
+          return;
+        }
+        if (response.assets && response.assets.length > 0) {
+          const asset = response.assets[0];
+          if (asset.uri) {
+            setPhotoURL(asset.uri);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error selecting image: ', error);
     }
   };
 
   const handleUpdateProfile = async () => {
+    console.log('Pressed');
     if (!userId) return;
+
     try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
+      let uploadedPhotoURL = photoURL;
+
+      if (photoURL && photoURL.startsWith('file://')) {
+        console.log('LOGSSSS', photoURL, '::', userId);
+        const uploadResult = await uploadImage(photoURL, userId);
+
+        if (!uploadResult) {
+          Alert.alert('Upload Failed', 'Image upload was unsuccessful.');
+          return;
+        }
+        uploadedPhotoURL = uploadResult.cloudinaryUrl;
+        setPhotoURL(uploadedPhotoURL);
+      }
+
+      await updateUser(userId, {
         name,
         email,
-        profilePicture: photoURL ?? '',
         phone,
+        profilePicture: uploadedPhotoURL ?? '',
       });
 
-      dispatch(login({userId, email}));
-      await AsyncStorage.setItem('email', email);
-      await AsyncStorage.setItem('phone', phone);
+      dispatch(login({userId, email, photoURL: uploadedPhotoURL}));
+      await AsyncStorage.setItem('profilePicture', uploadedPhotoURL ?? '');
 
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
@@ -102,23 +118,14 @@ const AccountScreen: React.FC = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-
-      await AsyncStorage.removeItem('userId');
-      await AsyncStorage.removeItem('email');
-      await AsyncStorage.removeItem('phone');
-
+      await AsyncStorage.clear();
       dispatch(logout());
-
-      setTimeout(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{name: 'Login'}],
-        });
-      });
+      navigation.reset({index: 0, routes: [{name: 'Login'}]});
     } catch (error) {
       console.error('Logout Error:', error);
     }
   };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={pickImage}>
@@ -157,7 +164,6 @@ const AccountScreen: React.FC = () => {
 
 export default AccountScreen;
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
