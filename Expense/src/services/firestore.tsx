@@ -12,7 +12,8 @@ import {
 } from 'firebase/firestore';
 import {db, storage, ref, uploadBytes, getDownloadURL} from './firebase';
 import {Platform} from 'react-native';
-//create a new user in a firestore
+import {Friend} from '../types/types';
+
 export const createUser = async (
   userId: string,
   name: string,
@@ -59,31 +60,6 @@ export const createGroup = async (
     return groupRef.id;
   } catch (error) {
     console.error('Error creating group:', error);
-    return null;
-  }
-};
-
-export const addExpense = async (
-  groupId: string,
-  paidBy: string,
-  amount: number,
-  splitBetween: string[],
-  description: string,
-) => {
-  try {
-    const expenseRef = await addDoc(collection(db, 'expenses'), {
-      groupId,
-      paidBy,
-      amount,
-      splitBetween,
-      description,
-      createdAt: serverTimestamp(),
-    });
-
-    console.log('✅ Expense added successfully with ID:', expenseRef.id);
-    return expenseRef.id;
-  } catch (error) {
-    console.error('Error adding expense:', error);
     return null;
   }
 };
@@ -143,18 +119,17 @@ const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dqx2mxtys/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
 export const uploadImage = async (uri: string, userId: string) => {
   try {
-    const imageUri =
-      Platform.OS === 'android' ? uri : uri.replace('file://', '');
+    const imageUri = uri.replace('file://', '');
+    //Platform.OS === 'android' ? uri :
 
     const formData = new FormData();
     formData.append('file', {
       uri: imageUri,
-      name: `image_${Date.now()}.jpg`, // Give a unique name
-      type: 'image/jpeg', // Ensure the correct type
+      name: `image_${Date.now()}.jpg`,
+      type: 'image/jpeg',
     });
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-    // ✅ Upload to Cloudinary
     const cloudinaryResponse = await fetch(CLOUDINARY_URL, {
       method: 'POST',
       body: formData,
@@ -163,26 +138,82 @@ export const uploadImage = async (uri: string, userId: string) => {
     const cloudinaryData = await cloudinaryResponse.json();
 
     if (!cloudinaryResponse.ok || !cloudinaryData.secure_url) {
-      console.error(
-        '❌ Cloudinary Upload Failed:',
-        await cloudinaryResponse.text(),
-      );
+      console.error(await cloudinaryResponse.text());
       throw new Error('Cloudinary upload failed');
     }
 
     const imageUrl = cloudinaryData.secure_url;
-    console.log('✅ Cloudinary Upload URL:', imageUrl);
-
-    // ✅ Store Cloudinary URL in Firestore
     const userRef = doc(db, 'users', userId);
     await setDoc(userRef, {profilePicture: imageUrl}, {merge: true});
 
-    console.log('✅ Cloudinary URL saved to Firestore');
-
     return {cloudinaryUrl: imageUrl};
   } catch (error) {
-    console.error('❌ Image upload error:', error);
+    console.error(' Image upload error:', error);
     return null;
+  }
+};
+
+export const addFriend = async (
+  friend: Friend,
+  userId: string | undefined,
+  existingFriends: string[],
+  setExistingFriends: React.Dispatch<React.SetStateAction<string[]>>,
+): Promise<void> => {
+  if (!userId) {
+    console.error('User ID is undefined.');
+    return;
+  }
+
+  const friendId = friend.userId || friend.phone;
+
+  if (!friendId) {
+    console.error('Friend ID could not be determined.');
+    return;
+  }
+
+  if (existingFriends.includes(friendId)) {
+    console.log(`Friend with ID ${friendId} already exists.`);
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, 'friends'), {
+      userId: userId,
+      friendId: friendId,
+      name: friend.name,
+      phone: friend.phone,
+      photo: friend.photo,
+      createdAt: serverTimestamp(),
+    });
+
+    setExistingFriends(prev => [...prev, friendId]);
+    console.log(`Friend with ID ${friendId} added successfully.`);
+  } catch (error) {
+    console.error('Error adding friend to Firestore:', error);
+  }
+};
+export const addExpense = async (
+  groupId: string,
+  paidBy: string,
+  amount: number,
+  splitBetween: string[],
+  description: string,
+) => {
+  try {
+    const expenseRef = await addDoc(collection(db, 'expenses'), {
+      groupId,
+      paidBy,
+      amount,
+      splitBetween,
+      description,
+      createdAt: serverTimestamp(),
+    });
+
+    console.log(' Expense added successfully with ID:', expenseRef.id);
+    return expenseRef.id;
+  } catch (error) {
+    console.error('Error adding expense:', error);
+    throw error;
   }
 };
 

@@ -29,7 +29,7 @@ const AccountScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<AccountScreenNavigationProp>();
   const {userId} = useSelector((state: RootState) => state.auth);
-  // Access group data if necessary
+
   const groupData = useSelector((state: RootState) => state.Group);
 
   const [name, setName] = useState('');
@@ -80,14 +80,12 @@ const AccountScreen: React.FC = () => {
   };
 
   const handleUpdateProfile = async () => {
-    console.log('Pressed');
     if (!userId) return;
 
     try {
       let uploadedPhotoURL = photoURL;
 
       if (photoURL && photoURL.startsWith('file://')) {
-        console.log('LOGSSSS', photoURL, '::', userId);
         const uploadResult = await uploadImage(photoURL, userId);
 
         if (!uploadResult) {
@@ -111,7 +109,6 @@ const AccountScreen: React.FC = () => {
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile.');
     }
   };
 

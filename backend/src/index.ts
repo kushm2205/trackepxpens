@@ -10,7 +10,6 @@ app.use(cors());
 
 connectDB(); // Connect to MongoDB
 
-// Nodemailer transporter setup (Gmail SMTP)
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {

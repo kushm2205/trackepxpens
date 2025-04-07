@@ -11,15 +11,13 @@ import Home from './src/Screens/Home';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GroupScreen from './src/Screens/GroupScrren';
 import CreateGroup from './src/Screens/CreateGroup';
+import FriendsScreen from './src/Screens/FriendsScreen';
+import FriendRequest from './src/Screens/FriendRequest';
+import {RootStackParamList} from './src/types/types';
+import GroupDetailsScreen from './src/Screens/GroupDetailsScreen';
+import ExpenseeScreen from './src/Screens/ExpenseeScreen';
 
 // Define the root stack parameter list
-export type RootStackParamList = {
-  Login: undefined;
-  Signup: undefined;
-  Home: undefined;
-  GroupScreen: undefined;
-  CreateGroup: undefined;
-};
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -36,7 +34,11 @@ const AppStack = () => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
     <Stack.Screen name="Home" component={Home} />
     <Stack.Screen name="GroupScreen" component={GroupScreen} />
+    <Stack.Screen name="AddExpense" component={ExpenseeScreen} />
     <Stack.Screen name="CreateGroup" component={CreateGroup} />
+    <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
+    <Stack.Screen name="FriendRequest" component={FriendRequest} />
+    <Stack.Screen name="GroupDetailsScreen" component={GroupDetailsScreen} />
   </Stack.Navigator>
 );
 

@@ -37,8 +37,7 @@ const GroupScreen = () => {
     <TouchableOpacity
       style={styles.groupItem}
       onPress={() => {
-        // Navigate to group chat or details
-        // navigation.navigate('GroupChat', { groupId: item.id });
+        navigation.navigate('GroupDetailsScreen', {groupId: item.id});
       }}>
       <Image
         source={

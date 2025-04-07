@@ -9,55 +9,19 @@ import {
   addDoc,
   updateDoc,
   arrayUnion,
+  serverTimestamp,
 } from 'firebase/firestore';
 import {RootState} from '../store';
-
-// Define contact interfaces
-interface PhoneNumber {
-  number: string;
-  label?: string;
-}
-
-interface FirebaseUser {
-  id: string;
-  name: string;
-  phone: string;
-  profilePicture: string | null;
-  isFirebaseUser: true;
-}
-
-interface DeviceContact {
-  recordID: string;
-  displayName: string;
-  phoneNumbers: PhoneNumber[];
-  isFirebaseUser: false;
-  profilePicture: string | null;
-}
-
-type Contact = FirebaseUser | DeviceContact;
-
-// Define group types
-interface Group {
-  id: string;
-  groupName: string;
-  admin: string;
-  members: string[];
-  createdAt: string;
-  groupImage: string | null;
-  membersCount: number;
-  groupImageUrl: string | null;
-}
-
-// Define group state type
-interface GroupState {
-  groups: Group[];
-  selectedMembers: string[];
-  searchResults: Contact[];
-  deviceContacts: DeviceContact[];
-  users: FirebaseUser[];
-  loading: boolean;
-  error: string | null;
-}
+import {addExpense as addExpenseToFirestore} from '../../services/firestore';
+import {
+  DeviceContact,
+  FirebaseUser,
+  Contact,
+  PhoneNumber,
+  Group,
+  AddExpensePayload,
+  CreateGroupPayload,
+} from '../../types/types';
 
 // Fetch all groups
 export const fetchGroups = createAsyncThunk<
@@ -99,12 +63,13 @@ export const fetchUsers = createAsyncThunk<
       const data = doc.data();
       return {
         id: doc.id,
-        name: data.name,
-        phone: data.phone,
-        profilePicture: data.profilePicture,
+        name: data.name || 'Unknown',
+        phone: data.phone || '',
+        profilePicture: data.profilePicture || null,
         isFirebaseUser: true,
       } as FirebaseUser;
     });
+    console.log('fetch user', usersList);
     return usersList;
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -112,58 +77,65 @@ export const fetchUsers = createAsyncThunk<
   }
 });
 
-// Interface for creating a new group
-interface CreateGroupPayload {
-  groupName: string;
-  adminUserId: string;
-  members: string[];
-  groupImage: string | null;
-}
-
-// Create a new group
 export const createNewGroup = createAsyncThunk<
   Group,
   CreateGroupPayload,
-  {rejectValue: string}
+  {rejectValue: string; state: RootState}
 >(
   'group/createNewGroup',
-  async ({groupName, adminUserId, members, groupImage}, {rejectWithValue}) => {
+  async (
+    {groupName, adminUserId, members, groupImage},
+    {rejectWithValue, getState},
+  ) => {
     try {
+      if (!adminUserId) {
+        return rejectWithValue('Admin user ID is required');
+      }
+
+      const uniqueMembers = Array.from(new Set([adminUserId, ...members]));
+
       const groupData = {
-        groupName,
+        groupName: groupName.trim(),
         admin: adminUserId,
-        members: [adminUserId, ...members.filter(id => id !== adminUserId)],
+        members: uniqueMembers,
         createdAt: new Date().toISOString(),
-        groupImage,
+        timestamp: serverTimestamp(),
+        groupImage: groupImage || null,
       };
 
       const docRef = await addDoc(collection(db, 'groups'), groupData);
+
+      await addDoc(collection(db, 'groups', docRef.id, 'messages'), {
+        text: 'Group created',
+        senderId: adminUserId,
+        timestamp: serverTimestamp(),
+        systemMessage: true,
+      });
+
       return {
         id: docRef.id,
         ...groupData,
-        membersCount: groupData.members.length,
+        membersCount: uniqueMembers.length,
         groupImageUrl: groupImage,
       } as Group;
     } catch (error) {
       console.error('Error creating group:', error);
-      return rejectWithValue('Failed to create group');
+      return rejectWithValue('Failed to create group: ' + error);
     }
   },
 );
 
-// Fetch device contacts
 export const getDeviceContacts = createAsyncThunk<
   DeviceContact[],
   any[],
   {rejectValue: string}
 >('group/getDeviceContacts', async (contactsList, {rejectWithValue}) => {
   try {
-    // The actual contacts fetching is done in the component
-    // This just stores the contacts in Redux state
+    // Format device contacts to match our interface
     const formattedContacts = contactsList.map(contact => ({
       recordID: contact.recordID,
-      displayName: contact.displayName,
-      phoneNumbers: contact.phoneNumbers,
+      displayName: contact.displayName || 'Unknown',
+      phoneNumbers: contact.phoneNumbers || [],
       isFirebaseUser: false as const,
       profilePicture: contact.thumbnailPath || null,
     }));
@@ -174,14 +146,12 @@ export const getDeviceContacts = createAsyncThunk<
   }
 });
 
-// Interface for search payload
 interface SearchPayload {
   query: string;
   users: FirebaseUser[];
   deviceContacts: DeviceContact[];
 }
 
-// Search contacts and users
 export const searchContactsAndUsers = createAsyncThunk<
   Contact[],
   SearchPayload,
@@ -190,38 +160,103 @@ export const searchContactsAndUsers = createAsyncThunk<
   'group/searchContactsAndUsers',
   async ({query, users, deviceContacts}, {rejectWithValue}) => {
     try {
-      if (query.trim() === '') {
-        return [];
-      }
-
       const searchQuery = query.toLowerCase();
-      const allContacts = [...users, ...deviceContacts];
+      console.log('Starting search with query:', searchQuery);
 
-      const results = allContacts.filter(contact => {
-        const nameMatch = (
-          contact.isFirebaseUser ? contact.name : contact.displayName || ''
-        )
-          .toLowerCase()
-          .includes(searchQuery);
-
-        const phoneMatch = contact.isFirebaseUser
-          ? contact.phone.toLowerCase().includes(searchQuery)
-          : (contact.phoneNumbers?.[0]?.number || '')
-              .toLowerCase()
-              .includes(searchQuery);
-
+      const filteredUsers = users.filter(user => {
+        const nameMatch = user.name?.toLowerCase().includes(searchQuery);
+        const phoneMatch = user.phone?.toLowerCase().includes(searchQuery);
         return nameMatch || phoneMatch;
       });
 
+      const filteredContacts = deviceContacts.filter(contact => {
+        const nameMatch = contact.displayName
+          ?.toLowerCase()
+          .includes(searchQuery);
+        const phoneMatch = contact.phoneNumbers?.some(phone =>
+          phone.number?.toLowerCase().includes(searchQuery),
+        );
+        return nameMatch || phoneMatch;
+      });
+
+      const results = [...filteredUsers, ...filteredContacts];
+      console.log('Search results count:', results.length);
       return results;
     } catch (error) {
-      console.error('Error searching contacts:', error);
+      console.error('Search error:', error);
       return rejectWithValue('Failed to search contacts');
     }
   },
 );
+export const fetchGroupDetails = createAsyncThunk<
+  Group,
+  string,
+  {rejectValue: string}
+>('group/fetchGroupDetails', async (groupId, {rejectWithValue}) => {
+  try {
+    const groupDoc = await getDoc(doc(db, 'groups', groupId));
+    if (groupDoc.exists()) {
+      const groupData = groupDoc.data();
+      const membersCount = groupData.members ? groupData.members.length : 0;
+      return {
+        id: groupDoc.id,
+        ...groupData,
+        membersCount,
+        groupImageUrl: groupData.groupImage || null,
+      } as Group;
+    } else {
+      return rejectWithValue('Group not found');
+    }
+  } catch (error) {
+    console.error('Error fetching group details:', error);
+    return rejectWithValue('Failed to fetch group details');
+  }
+});
 
-// Initial state
+export const fetchUserDetails = createAsyncThunk<
+  {userId: string; name: string},
+  string,
+  {rejectValue: string}
+>('group/fetchUserDetails', async (userId, {rejectWithValue}) => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      return {userId, name: userData.name || 'Unknown'};
+    } else {
+      return rejectWithValue('User not found');
+    }
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    return rejectWithValue('Failed to fetch user details');
+  }
+});
+
+export const addExpense = createAsyncThunk<
+  void,
+  AddExpensePayload,
+  {rejectValue: string}
+>(
+  'group/addExpense',
+  async (
+    {groupId, paidBy, amount, splitBetween, description},
+    {rejectWithValue},
+  ) => {
+    try {
+      await addExpenseToFirestore(
+        groupId,
+        paidBy,
+        amount,
+        splitBetween,
+        description,
+      );
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      return rejectWithValue('Failed to add expense');
+    }
+  },
+);
+
 const initialState: GroupState = {
   groups: [],
   selectedMembers: [],
@@ -230,6 +265,8 @@ const initialState: GroupState = {
   users: [],
   loading: false,
   error: null,
+  selectedGroup: null,
+  memberNames: {},
 };
 
 const groupSlice = createSlice({
@@ -252,10 +289,7 @@ const groupSlice = createSlice({
     clearSearchResults: state => {
       state.searchResults = [];
     },
-    setSearchQuery: (state, action: PayloadAction<string>) => {
-      // This is just a placeholder - the actual search will be triggered by the thunk
-      // We could store the current searchQuery here if needed
-    },
+    setSearchQuery: (state, action: PayloadAction<string>) => {},
   },
   extraReducers: builder => {
     // Fetch groups
@@ -307,8 +341,46 @@ const groupSlice = createSlice({
     });
 
     // Search contacts and users
+    builder.addCase(searchContactsAndUsers.pending, state => {
+      state.loading = true;
+    });
     builder.addCase(searchContactsAndUsers.fulfilled, (state, action) => {
       state.searchResults = action.payload;
+      // state.loading = false;
+    });
+    builder.addCase(searchContactsAndUsers.rejected, (state, action) => {
+      state.searchResults = [];
+      // state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    builder.addCase(fetchGroupDetails.pending, state => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(fetchGroupDetails.fulfilled, (state, action) => {
+      state.selectedGroup = action.payload;
+      state.loading = false;
+    });
+    builder.addCase(fetchGroupDetails.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    builder.addCase(fetchUserDetails.fulfilled, (state, action) => {
+      state.memberNames[action.payload.userId] = action.payload.name;
+    });
+
+    builder.addCase(addExpense.pending, state => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(addExpense.fulfilled, state => {
+      state.loading = false;
+    });
+    builder.addCase(addExpense.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
     });
   },
 });

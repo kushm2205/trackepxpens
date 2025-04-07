@@ -10,7 +10,7 @@ import {
   signInWithCredential,
 } from 'firebase/auth';
 import {getFirestore, setDoc, doc} from 'firebase/firestore';
-import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage'; // Import storage functions
+import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey:
