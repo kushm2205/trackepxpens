@@ -192,6 +192,7 @@ export const addFriend = async (
     console.error('Error adding friend to Firestore:', error);
   }
 };
+// In firestore.ts - Improve addExpense with validation
 export const addExpense = async (
   groupId: string,
   paidBy: string,
@@ -200,20 +201,35 @@ export const addExpense = async (
   description: string,
 ) => {
   try {
-    const expenseRef = await addDoc(collection(db, 'expenses'), {
+    if (!groupId || !paidBy || amount <= 0 || splitBetween.length === 0) {
+      throw new Error('Invalid expense parameters');
+    }
+
+    if (!splitBetween.includes(paidBy)) {
+      splitBetween = [...splitBetween];
+    }
+
+    const expenseData = {
       groupId,
       paidBy,
-      amount,
+      amount: Number(amount.toFixed(2)),
       splitBetween,
       description,
       createdAt: serverTimestamp(),
+      settled: false,
+    };
+
+    const expenseRef = await addDoc(collection(db, 'expenses'), expenseData);
+
+    // Also update group's lastActivity timestamp
+    await updateDoc(doc(db, 'groups', groupId), {
+      lastActivity: serverTimestamp(),
     });
 
-    console.log(' Expense added successfully with ID:', expenseRef.id);
     return expenseRef.id;
   } catch (error) {
     console.error('Error adding expense:', error);
-    throw error;
+    throw new Error(`Failed to add expense: ${error}`);
   }
 };
 

@@ -40,7 +40,7 @@ const FriendRequestScreen = ({navigation}: any) => {
   };
 
   const normalizePhoneNumber = (phone: string) => {
-    return phone.replace(/\D/g, '').slice(-10);
+    return phone.replace(/\D/g, '').slice(-10); // Keep last 10 digits
   };
 
   const fetchContacts = async () => {

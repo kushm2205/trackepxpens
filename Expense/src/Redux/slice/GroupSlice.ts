@@ -22,8 +22,10 @@ import {
   AddExpensePayload,
   CreateGroupPayload,
 } from '../../types/types';
+import {linkWithRedirect} from 'firebase/auth';
+import {ThemeContext, ThemeProvider} from '@react-navigation/native';
+import {calculateShares} from '../../utils/Expenssutils';
 
-// Fetch all groups
 export const fetchGroups = createAsyncThunk<
   Group[],
   void,
@@ -51,7 +53,6 @@ export const fetchGroups = createAsyncThunk<
   }
 });
 
-// Fetch users from Firestore
 export const fetchUsers = createAsyncThunk<
   FirebaseUser[],
   void,
@@ -267,7 +268,14 @@ const initialState: GroupState = {
   error: null,
   selectedGroup: null,
   memberNames: {},
+  balances: {},
 };
+interface ExpensePayload {
+  groupId: string;
+  paidBy: string;
+  amount: number;
+  splitBetween: string[];
+}
 
 const groupSlice = createSlice({
   name: 'group',
@@ -277,7 +285,7 @@ const groupSlice = createSlice({
       const memberId = action.payload;
       if (state.selectedMembers.includes(memberId)) {
         state.selectedMembers = state.selectedMembers.filter(
-          id => id !== memberId,
+          (id: string) => id !== memberId,
         );
       } else {
         state.selectedMembers.push(memberId);
@@ -290,9 +298,33 @@ const groupSlice = createSlice({
       state.searchResults = [];
     },
     setSearchQuery: (state, action: PayloadAction<string>) => {},
+
+    addExpenseTransaction: (state, action: PayloadAction<ExpensePayload>) => {
+      const {groupId, paidBy, amount, splitBetween} = action.payload;
+
+      try {
+        const shares = calculateShares(amount, splitBetween, paidBy);
+
+        if (!state.balances[groupId]) {
+          state.balances[groupId] = {};
+        }
+
+        Object.entries(shares).forEach(([userId, amount]) => {
+          if (!state.balances[groupId][userId]) {
+            state.balances[groupId][userId] = {};
+          }
+
+          if (userId !== paidBy) {
+            state.balances[groupId][userId][paidBy] =
+              (state.balances[groupId][userId][paidBy] || 0) + amount;
+          }
+        });
+      } catch (error) {
+        console.error('Balance calculation failed:', error);
+      }
+    },
   },
   extraReducers: builder => {
-    // Fetch groups
     builder.addCase(fetchGroups.pending, state => {
       state.loading = true;
       state.error = null;
@@ -306,7 +338,6 @@ const groupSlice = createSlice({
       state.error = action.payload as string;
     });
 
-    // Fetch users
     builder.addCase(fetchUsers.pending, state => {
       state.loading = true;
       state.error = null;
@@ -320,7 +351,6 @@ const groupSlice = createSlice({
       state.error = action.payload as string;
     });
 
-    // Create group
     builder.addCase(createNewGroup.pending, state => {
       state.loading = true;
       state.error = null;
@@ -335,22 +365,20 @@ const groupSlice = createSlice({
       state.error = action.payload as string;
     });
 
-    // Get device contacts
     builder.addCase(getDeviceContacts.fulfilled, (state, action) => {
       state.deviceContacts = action.payload;
     });
 
-    // Search contacts and users
     builder.addCase(searchContactsAndUsers.pending, state => {
       state.loading = true;
     });
     builder.addCase(searchContactsAndUsers.fulfilled, (state, action) => {
       state.searchResults = action.payload;
-      // state.loading = false;
+      state.loading = false;
     });
     builder.addCase(searchContactsAndUsers.rejected, (state, action) => {
       state.searchResults = [];
-      // state.loading = false;
+      state.loading = false;
       state.error = action.payload as string;
     });
 
@@ -390,6 +418,7 @@ export const {
   clearSelectedMembers,
   clearSearchResults,
   setSearchQuery,
+  addExpenseTransaction,
 } = groupSlice.actions;
 
 export default groupSlice.reducer;

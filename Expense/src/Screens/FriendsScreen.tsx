@@ -1,11 +1,16 @@
-import React, {useEffect, useState} from 'react';
+// FriendsScreen.tsx
+import React, {useEffect} from 'react';
 import {Pressable, StyleSheet, Text, View, FlatList, Image} from 'react-native';
 import {RootStackParamList, Friend} from '../types/types';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {useNavigation} from '@react-navigation/native';
-import auth from '@react-native-firebase/auth';
-import {collection, getDocs, query, where} from 'firebase/firestore';
-import {db} from '../services/firestore';
+import {useDispatch, useSelector} from 'react-redux';
+import {
+  fetchFriends,
+  selectFriends,
+  selectFriendsLoading,
+} from '../Redux/slice/friendslice';
+import {AppDispatch} from '../Redux/store';
 
 type FriendScreenProp = StackNavigationProp<
   RootStackParamList,
@@ -14,72 +19,56 @@ type FriendScreenProp = StackNavigationProp<
 
 const FriendsScreen = () => {
   const navigation = useNavigation<FriendScreenProp>();
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [loading, setLoading] = useState(true);
-  const userId = auth().currentUser?.uid;
+  const dispatch = useDispatch<AppDispatch>(); // ✅ Correctly typed dispatch
+  const friends = useSelector(selectFriends);
+  const loading = useSelector(selectFriendsLoading);
 
   const FriendRequest = () => {
     navigation.navigate('FriendRequest');
   };
 
+  const handleAddExpense = (friend: Friend) => {
+    navigation.navigate('AddFriendExpense', {friend});
+  };
+
   useEffect(() => {
-    const fetchFriends = async () => {
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
+    dispatch(fetchFriends()); // ✅ Works with AppDispatch
+  }, [dispatch]);
 
-      try {
-        const friendsQuery = query(
-          collection(db, 'friends'),
-          where('userId', '==', userId),
-        );
-        const snapshot = await getDocs(friendsQuery);
-        const friendsList = snapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            userId: data.friendId,
-            name: data.name,
-            phone: data.phone,
-            photo: data.photo,
-          } as Friend;
-        });
-        setFriends(friendsList);
-      } catch (error) {
-        console.error('Error fetching friends from Firestore:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFriends();
-  }, [userId]);
+  const renderFriend = ({item}: {item: Friend}) => (
+    <Pressable onPress={() => handleAddExpense(item)}>
+      <View style={styles.friendItem}>
+        <Image
+          source={
+            item.photo ? {uri: item.photo} : require('../assets/download.png')
+          }
+          style={styles.friendImage}
+        />
+        <View style={styles.friendDetails}>
+          <Text style={styles.friendName}>{item.name}</Text>
+          <Text style={styles.friendPhone}>{item.phone}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
 
   if (loading) {
     return <Text style={{margin: 20}}>Loading...</Text>;
   }
 
-  const renderFriend = ({item}: {item: Friend}) => (
-    <View style={styles.friendItem}>
-      <Image
-        source={
-          item.photo ? {uri: item.photo} : require('../assets/download.png')
-        }
-        style={styles.friendImage}
-      />
-      <View style={styles.friendDetails}>
-        <Text style={styles.friendName}>{item.name}</Text>
-        <Text style={styles.friendPhone}>{item.phone}</Text>
-      </View>
-    </View>
-  );
-
   return (
     <View style={{flex: 1}}>
       <FlatList
         data={friends}
-        keyExtractor={item => item.userId || item.phone}
+        keyExtractor={(item, index) =>
+          item.userId ?? item.phone ?? index.toString()
+        } // ✅ Ensures string key
         renderItem={renderFriend}
+        ListEmptyComponent={
+          <Text style={{textAlign: 'center', marginTop: 20}}>
+            No friends found. Add some friends!
+          </Text>
+        }
       />
       <Pressable onPress={FriendRequest} style={styles.addButton}>
         <Text style={styles.addButtonText}>Add a New Friend</Text>

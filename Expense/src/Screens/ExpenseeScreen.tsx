@@ -1,4 +1,3 @@
-// AddExpenseScreen.tsx
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -10,13 +9,19 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
+import {calculateShares} from '../utils/Expenssutils';
 import {useSelector, useDispatch} from 'react-redux';
 import {RootState} from '../Redux/store';
 import {RouteProp, useRoute, useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {fetchGroupDetails, fetchUserDetails} from '../Redux/slice/GroupSlice';
-import {addExpense} from '../services/firestore';
+import {
+  addExpenseTransaction,
+  fetchGroupDetails,
+  fetchUserDetails,
+} from '../Redux/slice/GroupSlice';
+import {addExpense, db} from '../services/firestore';
 import {RootStackParamList} from '../types/types';
+import {addDoc, collection, serverTimestamp} from 'firebase/firestore';
 
 type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
 type AddExpenseScreenNavigationProp = StackNavigationProp<
@@ -63,17 +68,19 @@ const AddExpenseScreen: React.FC = () => {
     return <Text>Error: {error}</Text>;
   }
 
-  const handlePaidBySelection = (memberId: string) => {
-    setPaidBy(memberId);
-    setPaidByModalVisible(false);
-  };
+  const calculateBalances = () => {
+    const amt = parseFloat(amount);
+    const share = amt / splitBetween.length;
+    const balances: {[key: string]: number} = {};
 
-  const handleSplitBetweenSelection = (memberId: string) => {
-    if (splitBetween.includes(memberId)) {
-      setSplitBetween(splitBetween.filter(id => id !== memberId));
-    } else {
-      setSplitBetween([...splitBetween, memberId]);
-    }
+    splitBetween.forEach(user => {
+      if (user !== paidBy) {
+        balances[user] = (balances[user] || 0) - share;
+        balances[paidBy!] = (balances[paidBy!] || 0) + share;
+      }
+    });
+
+    return balances;
   };
 
   const handleAddExpenseSubmit = async () => {
@@ -81,7 +88,7 @@ const AddExpenseScreen: React.FC = () => {
       Alert.alert('Error', 'Please fill all fields.');
       return;
     }
-
+    console.log('Tranc', splitBetween);
     try {
       await addExpense(
         groupId,
@@ -90,6 +97,16 @@ const AddExpenseScreen: React.FC = () => {
         splitBetween,
         description,
       );
+
+      dispatch(
+        addExpenseTransaction({
+          groupId,
+          paidBy,
+          amount: parseFloat(amount),
+          splitBetween,
+        }),
+      );
+
       navigation.goBack();
     } catch (err) {
       console.error('Error adding expense:', err);
@@ -142,7 +159,10 @@ const AddExpenseScreen: React.FC = () => {
             renderItem={({item}) => (
               <TouchableOpacity
                 style={styles.modalItem}
-                onPress={() => handlePaidBySelection(item)}>
+                onPress={() => {
+                  setPaidBy(item);
+                  setPaidByModalVisible(false);
+                }}>
                 <Text>{memberNames[item]}</Text>
               </TouchableOpacity>
             )}
@@ -169,7 +189,14 @@ const AddExpenseScreen: React.FC = () => {
                   styles.modalItem,
                   splitBetween.includes(item) && styles.selectedModalItem,
                 ]}
-                onPress={() => handleSplitBetweenSelection(item)}>
+                onPress={() => {
+                  if (splitBetween.includes(item)) {
+                    setSplitBetween(splitBetween.filter(id => id !== item));
+                  } else {
+                    setSplitBetween([...splitBetween, item]);
+                  }
+                  console.log('splitBetween--', splitBetween);
+                }}>
                 <Text>{memberNames[item]}</Text>
               </TouchableOpacity>
             )}

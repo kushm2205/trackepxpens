@@ -11,6 +11,7 @@ export type RootStackParamList = {
   GroupDetailsScreen: {groupId: string};
   AddExpense: {groupId: string};
   Expense: {groupId: string};
+  AddFriendExpense: {friend: Friend};
 };
 
 // User type
@@ -83,7 +84,12 @@ interface GroupState {
   loading: boolean;
   error: string | null;
   selectedGroup: Group | null;
-  memberNames: Record<string, string>; // Map of user IDs to names
+  memberNames: Record<string, string>;
+  balances: {
+    [userId: string]: {
+      [userId: string]: number;
+    };
+  };
 }
 
 export interface AddExpensePayload {
@@ -99,4 +105,30 @@ export interface CreateGroupPayload {
   adminUserId: string;
   members: string[];
   groupImage: string | null;
+}
+export interface ExpensePayload {
+  groupId: string;
+  paidBy: string;
+  amount: number;
+  splitBetween: string[];
+  description?: string;
+}
+export interface Balance {
+  [userId: string]: number;
+}
+
+export interface GroupBalances {
+  [groupId: string]: {
+    [userId: string]: Balance;
+  };
+}
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  paidBy: string;
+  splitBetween: string[];
+  createdAt: any;
+  groupId: string | null;
+  isFriendExpense: boolean;
 }
