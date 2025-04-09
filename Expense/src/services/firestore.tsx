@@ -119,8 +119,8 @@ const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dqx2mxtys/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
 export const uploadImage = async (uri: string, userId: string) => {
   try {
-    const imageUri = uri.replace('file://', '');
-    //Platform.OS === 'android' ? uri :
+    const imageUri =
+      Platform.OS === 'android' ? uri : uri.replace('file://', '');
 
     const formData = new FormData();
     formData.append('file', {
@@ -192,7 +192,7 @@ export const addFriend = async (
     console.error('Error adding friend to Firestore:', error);
   }
 };
-// In firestore.ts - Improve addExpense with validation
+
 export const addExpense = async (
   groupId: string,
   paidBy: string,
@@ -230,6 +230,40 @@ export const addExpense = async (
   } catch (error) {
     console.error('Error adding expense:', error);
     throw new Error(`Failed to add expense: ${error}`);
+  }
+};
+export const addFriendExpense = async (
+  // Renamed function
+  paidBy: string,
+  amount: number,
+  splitBetween: string[],
+  description: string,
+  friendId: string,
+) => {
+  try {
+    if (!paidBy || amount <= 0 || splitBetween.length === 0 || !friendId) {
+      throw new Error('Invalid friend expense parameters');
+    }
+
+    const expenseData = {
+      paidBy,
+      amount: Number(amount.toFixed(2)),
+      splitBetween,
+      description,
+      friendId,
+      createdAt: serverTimestamp(),
+      settled: false,
+    };
+
+    const expenseRef = await addDoc(
+      collection(db, 'friend_expenses'),
+      expenseData,
+    );
+
+    return expenseRef.id;
+  } catch (error) {
+    console.error('Error adding friend expense:', error);
+    throw new Error(`Failed to add friend expense: ${error}`);
   }
 };
 

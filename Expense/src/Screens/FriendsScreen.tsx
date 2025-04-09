@@ -1,5 +1,4 @@
-// FriendsScreen.tsx
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Pressable, StyleSheet, Text, View, FlatList, Image} from 'react-native';
 import {RootStackParamList, Friend} from '../types/types';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -10,7 +9,7 @@ import {
   selectFriends,
   selectFriendsLoading,
 } from '../Redux/slice/friendslice';
-import {AppDispatch} from '../Redux/store';
+import {AppDispatch, RootState} from '../Redux/store';
 
 type FriendScreenProp = StackNavigationProp<
   RootStackParamList,
@@ -19,9 +18,13 @@ type FriendScreenProp = StackNavigationProp<
 
 const FriendsScreen = () => {
   const navigation = useNavigation<FriendScreenProp>();
-  const dispatch = useDispatch<AppDispatch>(); // ✅ Correctly typed dispatch
+  const dispatch = useDispatch<AppDispatch>();
   const friends = useSelector(selectFriends);
   const loading = useSelector(selectFriendsLoading);
+  const [friendBalances, setFriendBalances] = useState<Record<string, number>>(
+    {},
+  );
+  const [newFriends, setNewFriend] = useState([]);
 
   const FriendRequest = () => {
     navigation.navigate('FriendRequest');
@@ -30,39 +33,49 @@ const FriendsScreen = () => {
   const handleAddExpense = (friend: Friend) => {
     navigation.navigate('AddFriendExpense', {friend});
   };
-
+  const {userId} = useSelector((state: RootState) => state.auth);
+  console.log('Firrne_IDDD', userId);
   useEffect(() => {
-    dispatch(fetchFriends()); // ✅ Works with AppDispatch
+    dispatch(fetchFriends(userId));
   }, [dispatch]);
 
-  const renderFriend = ({item}: {item: Friend}) => (
-    <Pressable onPress={() => handleAddExpense(item)}>
-      <View style={styles.friendItem}>
-        <Image
-          source={
-            item.photo ? {uri: item.photo} : require('../assets/download.png')
-          }
-          style={styles.friendImage}
-        />
-        <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{item.name}</Text>
-          <Text style={styles.friendPhone}>{item.phone}</Text>
+  useEffect(() => {
+    if (friends) {
+      setNewFriend;
+    }
+  }, [friends]);
+
+  const renderFriend = ({item}: {item: Friend}) => {
+    console.log('Rendering friend:', item, friends);
+    return (
+      <Pressable onPress={() => handleAddExpense(item)}>
+        <View style={styles.friendItem}>
+          <Image
+            source={
+              item.photo ? {uri: item.photo} : require('../assets/download.png')
+            }
+            style={styles.friendImage}
+          />
+          <View style={styles.friendDetails}>
+            <Text style={styles.friendName}>{item.name}</Text>
+            <Text style={styles.friendPhone}>{item.phone}</Text>
+          </View>
         </View>
-      </View>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   if (loading) {
     return <Text style={{margin: 20}}>Loading...</Text>;
   }
-
+  console.log(friends);
   return (
     <View style={{flex: 1}}>
       <FlatList
         data={friends}
         keyExtractor={(item, index) =>
           item.userId ?? item.phone ?? index.toString()
-        } // ✅ Ensures string key
+        }
         renderItem={renderFriend}
         ListEmptyComponent={
           <Text style={{textAlign: 'center', marginTop: 20}}>
@@ -78,7 +91,6 @@ const FriendsScreen = () => {
 };
 
 export default FriendsScreen;
-
 const styles = StyleSheet.create({
   addButton: {
     backgroundColor: 'blue',

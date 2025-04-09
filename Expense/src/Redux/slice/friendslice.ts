@@ -1,15 +1,13 @@
-// store/slices/friendsSlice.ts
 import {createAsyncThunk, createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {Friend} from '../../types/types';
 import {RootState} from '../store';
-import auth from '@react-native-firebase/auth';
 import {
   addDoc,
   collection,
-  getDocs,
   query,
   serverTimestamp,
   where,
+  onSnapshot,
 } from 'firebase/firestore';
 import {db} from '../../services/firestore';
 
@@ -63,10 +61,12 @@ export const addFriend = createAsyncThunk(
 
 export const fetchFriends = createAsyncThunk(
   'friends/fetchFriends',
-  async (_, {rejectWithValue}) => {
+  async (userId, {dispatch, rejectWithValue}) => {
     try {
-      const userId = auth().currentUser?.uid;
+      console.log('Fetch_Friends___');
+      console.log('User_ID', userId);
       if (!userId) {
+        console.log('userId is null');
         return [];
       }
 
@@ -74,18 +74,37 @@ export const fetchFriends = createAsyncThunk(
         collection(db, 'friends'),
         where('userId', '==', userId),
       );
-      const snapshot = await getDocs(friendsQuery);
-      const friendsList = snapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-          userId: data.friendId,
-          name: data.name,
-          phone: data.phone,
-          photo: data.photo,
-        } as Friend;
+
+      return new Promise<void>((resolve, reject) => {
+        const unsubscribe = onSnapshot(
+          friendsQuery,
+          snapshot => {
+            const friendsList = snapshot.docs.map(docSnap => {
+              const data = docSnap.data();
+              console.log('Doc_Data', data);
+              return {
+                userId: data.friendId,
+                name: data.name,
+                phone: data.phone,
+                photo: data.photo,
+              } as Friend;
+            });
+
+            console.log('Realtime friends update:', friendsList);
+            dispatch(setFriends(friendsList)); // Dispatch action to update Redux store
+            resolve();
+          },
+          error => {
+            console.error('error fetching friends:', error.message, error.code);
+            reject(rejectWithValue(error.message || 'Error fetching friends'));
+          },
+        );
+
+        // Return the unsubscribe function to allow cleanup
+        return unsubscribe;
       });
-      return friendsList;
     } catch (error: any) {
+      console.error('error fetching friends:', error.message, error.code);
       return rejectWithValue(error.message || 'Error fetching friends');
     }
   },
@@ -94,27 +113,24 @@ export const fetchFriends = createAsyncThunk(
 const friendsSlice = createSlice({
   name: 'friends',
   initialState,
-  reducers: {},
+  reducers: {
+    setFriends: (state, action: PayloadAction<Friend[]>) => {
+      state.friends = action.payload;
+      state.loading = false;
+    },
+  },
   extraReducers: builder => {
     builder
-      // Fetch friends cases
+
       .addCase(fetchFriends.pending, state => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(
-        fetchFriends.fulfilled,
-        (state, action: PayloadAction<Friend[]>) => {
-          state.loading = false;
-          state.friends = action.payload;
-        },
-      )
       .addCase(fetchFriends.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
 
-      // Add friend cases
       .addCase(addFriend.pending, state => {
         state.loading = true;
         state.error = null;
@@ -130,6 +146,7 @@ const friendsSlice = createSlice({
   },
 });
 
+export const {setFriends} = friendsSlice.actions;
 export const selectFriends = (state: RootState) => state.friends.friends;
 export const selectFriendsLoading = (state: RootState) => state.friends.loading;
 export const selectFriendsError = (state: RootState) => state.friends.error;

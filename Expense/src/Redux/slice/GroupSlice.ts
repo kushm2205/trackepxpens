@@ -1,5 +1,5 @@
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
-import {db} from '../../services/firebase';
+import {auth, db} from '../../services/firebase';
 import {
   collection,
   getDocs,
@@ -10,6 +10,8 @@ import {
   updateDoc,
   arrayUnion,
   serverTimestamp,
+  where,
+  query,
 } from 'firebase/firestore';
 import {RootState} from '../store';
 import {addExpense as addExpenseToFirestore} from '../../services/firestore';
@@ -32,7 +34,17 @@ export const fetchGroups = createAsyncThunk<
   {rejectValue: string}
 >('group/fetchGroups', async (_, {rejectWithValue}) => {
   try {
-    const groupsSnapshot = await getDocs(collection(db, 'groups'));
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      return rejectWithValue('User not authenticated');
+    }
+
+    const groupsQuery = query(
+      collection(db, 'groups'),
+      where('members', 'array-contains', currentUser.uid),
+    );
+    const groupsSnapshot = await getDocs(groupsQuery);
+
     const groupsList = await Promise.all(
       groupsSnapshot.docs.map(async doc => {
         const groupData = doc.data();
@@ -189,6 +201,7 @@ export const searchContactsAndUsers = createAsyncThunk<
     }
   },
 );
+
 export const fetchGroupDetails = createAsyncThunk<
   Group,
   string,
@@ -390,6 +403,7 @@ const groupSlice = createSlice({
       state.selectedGroup = action.payload;
       state.loading = false;
     });
+
     builder.addCase(fetchGroupDetails.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;

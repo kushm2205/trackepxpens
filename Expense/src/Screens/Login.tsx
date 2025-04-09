@@ -38,6 +38,9 @@ const Login: React.FC = () => {
       );
       const user = userCredential.user;
       setUserId(user.uid);
+      console.log('====================================');
+      console.log('-=-=-=-=-=', user.uid);
+      console.log('====================================');
       sendOtp();
     } catch (error) {
       Alert.alert('Error', 'Invalid email or password.');

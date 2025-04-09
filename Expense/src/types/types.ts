@@ -12,9 +12,9 @@ export type RootStackParamList = {
   AddExpense: {groupId: string};
   Expense: {groupId: string};
   AddFriendExpense: {friend: Friend};
+  FriendExpenseDetails: {friend: Friend};
 };
 
-// User type
 export interface User {
   id: string;
   name: string;
@@ -85,11 +85,7 @@ interface GroupState {
   error: string | null;
   selectedGroup: Group | null;
   memberNames: Record<string, string>;
-  balances: {
-    [userId: string]: {
-      [userId: string]: number;
-    };
-  };
+  balances: Record<string, Record<string, number>>;
 }
 
 export interface AddExpensePayload {

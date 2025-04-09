@@ -9,7 +9,11 @@ interface AuthState {
   loading: boolean;
   isAuthenticated: boolean;
 }
-
+export interface LoggedInUser {
+  userId: string | null;
+  email: string | null;
+  photoURL: string | null;
+}
 // Load auth state from AsyncStorage
 export const loadAuthState = createAsyncThunk(
   'auth/loadAuthState',

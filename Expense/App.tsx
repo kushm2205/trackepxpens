@@ -16,6 +16,8 @@ import FriendRequest from './src/Screens/FriendRequest';
 import {RootStackParamList} from './src/types/types';
 import GroupDetailsScreen from './src/Screens/GroupDetailsScreen';
 import ExpenseeScreen from './src/Screens/ExpenseeScreen';
+import AddFriendExpense from './src/Screens/AddFriendExpense';
+import FriendExpenseDetails from './src/Screens/FriendExpenseDetails';
 
 // Define the root stack parameter list
 
@@ -37,8 +39,14 @@ const AppStack = () => (
     <Stack.Screen name="AddExpense" component={ExpenseeScreen} />
     <Stack.Screen name="CreateGroup" component={CreateGroup} />
     <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
+    <Stack.Screen name="AddFriendExpense" component={AddFriendExpense} />
     <Stack.Screen name="FriendRequest" component={FriendRequest} />
     <Stack.Screen name="GroupDetailsScreen" component={GroupDetailsScreen} />
+
+    <Stack.Screen
+      name="FriendExpenseDetails"
+      component={FriendExpenseDetails}
+    />
   </Stack.Navigator>
 );
 

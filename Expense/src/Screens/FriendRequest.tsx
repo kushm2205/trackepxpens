@@ -22,11 +22,14 @@ import {
   where,
 } from 'firebase/firestore';
 import {db} from '../services/firestore';
+import {RootState} from '../Redux/store';
+import {useSelector} from 'react-redux';
 
 const FriendRequestScreen = ({navigation}: any) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [contactResults, setContactResults] = useState<any[]>([]);
-  const userId = auth().currentUser?.uid;
+  // const userId = auth().currentUser?.uid;
+  const {userId} = useSelector((state: RootState) => state.auth);
   const [existingFriends, setExistingFriends] = useState<string[]>([]);
 
   const requestContactPermission = async () => {
@@ -40,7 +43,7 @@ const FriendRequestScreen = ({navigation}: any) => {
   };
 
   const normalizePhoneNumber = (phone: string) => {
-    return phone.replace(/\D/g, '').slice(-10); // Keep last 10 digits
+    return phone.replace(/\D/g, '').slice(-10);
   };
 
   const fetchContacts = async () => {
@@ -100,11 +103,17 @@ const FriendRequestScreen = ({navigation}: any) => {
   };
 
   const addFriend = async (friend: any) => {
-    if (!userId) return;
+    console.log('Pressed');
+    console.log('Pressed', userId);
+    // if (!userId) {
+    //   console.log('User ID is null');
+    //   return;
+    // }
 
     const friendId = friend.userId || friend.phone;
 
     if (existingFriends.includes(friendId)) {
+      console.log('Friend already exists');
       Alert.alert(
         'Already Friend',
         'This user is already in your friend list.',
@@ -113,10 +122,12 @@ const FriendRequestScreen = ({navigation}: any) => {
     }
 
     try {
+      console.log('Attempting to add friend:', friend);
       const friendDocRef = doc(db, 'friends', `${userId}_${friendId}`);
       const friendDoc = await getDoc(friendDocRef);
 
       if (friendDoc.exists()) {
+        console.log('Friend document already exists');
         Alert.alert('Already Friend', 'Friend already added.');
         return;
       }
@@ -130,6 +141,7 @@ const FriendRequestScreen = ({navigation}: any) => {
         createdAt: new Date().toISOString(),
       });
 
+      console.log('Friend added successfully');
       Alert.alert('Success', 'Friend added successfully!');
       setExistingFriends(prev => [...prev, friendId]);
     } catch (error) {
@@ -204,7 +216,7 @@ const FriendRequestScreen = ({navigation}: any) => {
         renderItem={renderContact}
       />
       <TouchableOpacity
-        onPress={() => navigation.navigate('FriendsScreen')}
+        onPress={() => navigation.goBack()}
         style={{marginTop: 20, alignItems: 'center'}}>
         <Text style={{color: 'green'}}>Go to My Friends</Text>
       </TouchableOpacity>
