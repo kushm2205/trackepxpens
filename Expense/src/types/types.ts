@@ -85,7 +85,7 @@ interface GroupState {
   error: string | null;
   selectedGroup: Group | null;
   memberNames: Record<string, string>;
-  balances: Record<string, Record<string, number>>;
+  balances: Record<string, Record<string, Record<string, number>>>;
 }
 
 export interface AddExpensePayload {

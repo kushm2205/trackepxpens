@@ -84,6 +84,7 @@ const GroupDetailsScreen: React.FC = () => {
     const unsubscribe = onSnapshot(expensesQuery, querySnapshot => {
       const expensesData: Expense[] = [];
       querySnapshot.forEach(doc => {
+        console.log('doc_Data', doc.data());
         const data = doc.data();
         expensesData.push({
           id: doc.id,
@@ -94,7 +95,7 @@ const GroupDetailsScreen: React.FC = () => {
           createdAt: data.createdAt?.toDate() || new Date(),
         });
       });
-      console.log('doc_Data', expensesData);
+
       expensesData.sort((a, b) => b.createdAt - a.createdAt);
       setExpenses(expensesData);
       setExpensesLoading(false);
@@ -130,8 +131,10 @@ const GroupDetailsScreen: React.FC = () => {
     // Calculate balances from expenses
     expenses.forEach(expense => {
       // Ensure the payer is included in splitBetween
-      const participants = expense.splitBetween;
-      console.log('Participants', participants);
+      const participants = expense.splitBetween.includes(expense.paidBy)
+        ? expense.splitBetween
+        : [...expense.splitBetween, expense.paidBy];
+
       const sharePerPerson = expense.amount / participants.length;
 
       // Add the full amount to the person who paid
@@ -179,7 +182,7 @@ const GroupDetailsScreen: React.FC = () => {
     const formattedDate = format(item.createdAt, 'MMM dd, yyyy');
     const paidByName = memberNames[item.paidBy] || item.paidBy;
     const isCurrentUserExpense = item.paidBy === currentUserId;
-    console.log('Item__', item);
+
     return (
       <View
         style={[

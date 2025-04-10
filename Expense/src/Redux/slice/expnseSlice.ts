@@ -11,6 +11,7 @@ interface FriendExpense {
   description: string;
   createdAt: any;
   settled: boolean;
+  paidFor: string;
 }
 
 interface FriendExpensesState {
@@ -36,12 +37,14 @@ export const addFriendExpenseThunk = createAsyncThunk(
       splitBetween,
       description,
       friendId,
+      paidFor,
     }: Omit<FriendExpense, 'createdAt' | 'settled'>,
     {rejectWithValue},
   ) => {
     try {
       const expenseId = await addFriendExpense(
         paidBy,
+        paidFor,
         amount,
         splitBetween,
         description,
@@ -51,6 +54,7 @@ export const addFriendExpenseThunk = createAsyncThunk(
       const newExpense: FriendExpense = {
         friendId,
         paidBy,
+        paidFor,
         amount,
         splitBetween,
         description,

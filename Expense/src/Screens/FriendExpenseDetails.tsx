@@ -68,7 +68,8 @@ const FriendExpenseDetails = () => {
 
     dispatch(
       addFriendExpenseThunk({
-        paidBy: paidBy, // Use the paid by value.
+        paidBy: paidBy,
+        paidFor: paidFor,
         amount: parseFloat(amount),
         splitBetween,
         description,

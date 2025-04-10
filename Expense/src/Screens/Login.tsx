@@ -88,7 +88,7 @@ const Login: React.FC = () => {
 
       if (storedUserId && storedEmail) {
         dispatch(login({userId: storedUserId, email: storedEmail}));
-        navigation.navigate('Home'); // ✅ Navigate to Home if user exists
+        navigation.navigate('Home');
       }
     };
 

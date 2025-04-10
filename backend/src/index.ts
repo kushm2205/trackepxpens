@@ -8,13 +8,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-connectDB(); // Connect to MongoDB
-
+connectDB();
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "kushp2224@gmail.com", // Replace with your email
-    pass: "ptxn kpaf caul zjdf", // Use an App Password (not your real password)
+    user: "kushp2224@gmail.com",
+    pass: "ptxn kpaf caul zjdf",
   },
 });
 
@@ -27,17 +26,16 @@ app.post("/send-otp", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000); // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000);
 
   try {
-    // Save OTP to database (replaces previous OTP for the same email)
     await Otp.findOneAndUpdate(
       { email },
       { otp, createdAt: new Date() },
       { upsert: true, new: true }
     );
 
-    console.log(`Generated OTP for ${email}: ${otp}`); // Debugging log
+    console.log(`Generated OTP for ${email}: ${otp}`);
 
     const mailOptions = {
       from: "kushp2224@gmail.com",
@@ -68,7 +66,7 @@ app.post("/verify-otp", async (req: Request, res: Response): Promise<void> => {
     const storedOtp = await Otp.findOne({ email });
     console.log(typeof otp);
     if (storedOtp && storedOtp.otp === otp) {
-      await Otp.deleteOne({ email }); // Remove OTP after successful verification
+      await Otp.deleteOne({ email });
       res.status(200).json({ message: "OTP verified successfully" });
       return;
     } else {
@@ -82,5 +80,4 @@ app.post("/verify-otp", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Start server
 app.listen(5000, () => console.log("Server running on port 5000"));

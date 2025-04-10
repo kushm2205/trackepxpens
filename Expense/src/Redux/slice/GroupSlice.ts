@@ -34,7 +34,9 @@ export const fetchGroups = createAsyncThunk<
   {rejectValue: string}
 >('group/fetchGroups', async (_, {rejectWithValue}) => {
   try {
+    console.log(auth);
     const currentUser = auth.currentUser;
+    console.log(currentUser);
     if (!currentUser) {
       return rejectWithValue('User not authenticated');
     }
@@ -43,7 +45,28 @@ export const fetchGroups = createAsyncThunk<
       collection(db, 'groups'),
       where('members', 'array-contains', currentUser.uid),
     );
-    const groupsSnapshot = await getDocs(groupsQuery);
+
+    // Add a timeout to handle potential Firebase issues
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), 10000);
+    });
+
+    const groupsPromise = getDocs(groupsQuery);
+
+    // Race between the request and a timeout
+    const groupsSnapshot = await Promise.race([
+      groupsPromise,
+      timeoutPromise,
+    ]).catch(error => {
+      console.error('Error in groups query:', error);
+      throw error;
+    });
+
+    // If the promise resolved but groupsSnapshot isn't valid, handle gracefully
+    if (!groupsSnapshot || typeof groupsSnapshot.docs === 'undefined') {
+      console.error('Invalid response from Firestore');
+      return rejectWithValue('Failed to fetch groups: Invalid response');
+    }
 
     const groupsList = await Promise.all(
       groupsSnapshot.docs.map(async doc => {
@@ -58,10 +81,15 @@ export const fetchGroups = createAsyncThunk<
         } as Group;
       }),
     );
+
     return groupsList;
   } catch (error) {
     console.error('Error fetching groups:', error);
-    return rejectWithValue('Failed to fetch groups');
+    return rejectWithValue(
+      `Failed to fetch groups: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`,
+    );
   }
 });
 

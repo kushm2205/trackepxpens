@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchGroups} from '../Redux/slice/GroupSlice';
@@ -14,6 +15,7 @@ import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../types/types';
 import {RootState, AppDispatch} from '../Redux/store';
+import {auth} from '../services/firebase';
 
 const defaultGroupImage = require('../assets/download.jpeg');
 type GroupScreenProp = StackNavigationProp<RootStackParamList, 'GroupScreen'>;
@@ -23,14 +25,45 @@ const GroupScreen = () => {
   const {groups, loading, error} = useSelector(
     (state: RootState) => state.Group,
   );
+  const authState = useSelector((state: RootState) => state.auth);
   const navigation = useNavigation<GroupScreenProp>();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   useEffect(() => {
-    dispatch(fetchGroups());
-  }, [dispatch]);
+    let isMounted = true;
+
+    const unsubscribe = auth.onAuthStateChanged(async user => {
+      if (!isMounted) return;
+
+      setAuthChecked(true);
+
+      if (user) {
+        try {
+          await user.getIdToken(true);
+          setTimeout(() => {
+            if (isMounted) {
+              dispatch(fetchGroups());
+            }
+          }, 5000);
+        } catch (error) {
+          console.error('Failed to refresh token:', error);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [dispatch, retryAttempt]);
 
   const handleCreateGroupPress = () => {
     navigation.navigate('CreateGroup');
+  };
+
+  const handleRetry = () => {
+    setRetryAttempt(prev => prev + 1);
   };
 
   const renderGroupItem = ({item}: {item: any}) => (
@@ -53,26 +86,59 @@ const GroupScreen = () => {
     </TouchableOpacity>
   );
 
+  if (!authChecked || authState.loading) {
+    return (
+      <View style={styles.authContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text style={styles.statusText}>Checking authentication...</Text>
+      </View>
+    );
+  }
+
+  if (!authState.isAuthenticated) {
+    return (
+      <View style={styles.authContainer}>
+        <Text style={styles.errorText}>Please log in to view your groups</Text>
+        <Button
+          title="Go to Login"
+          onPress={() => navigation.navigate('Login')}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Groups</Text>
 
-      {loading && <Text style={styles.statusText}>Loading groups...</Text>}
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={styles.statusText}>Loading groups...</Text>
+        </View>
+      )}
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Button title="Retry" onPress={handleRetry} />
+        </View>
+      )}
 
-      {!loading && groups.length === 0 && (
+      {!loading && groups && groups.length === 0 && !error && (
         <Text style={styles.statusText}>
           No groups found. Create your first group!
         </Text>
       )}
 
-      <FlatList
-        data={groups}
-        renderItem={renderGroupItem}
-        keyExtractor={item => item.id}
-        style={styles.groupsList}
-      />
+      {!loading && groups && groups.length > 0 && (
+        <FlatList
+          data={groups}
+          renderItem={renderGroupItem}
+          keyExtractor={item => item.id}
+          style={styles.groupsList}
+        />
+      )}
 
       <View style={styles.buttonContainer}>
         <Button title="Create New Group" onPress={handleCreateGroupPress} />
@@ -124,13 +190,26 @@ const styles = StyleSheet.create({
   },
   statusText: {
     textAlign: 'center',
-    marginVertical: 20,
+    marginVertical: 10,
     color: '#666',
   },
   errorText: {
     textAlign: 'center',
-    marginVertical: 20,
+    marginVertical: 10,
     color: 'red',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  authContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
   },
 });
 

@@ -196,6 +196,7 @@ export const addFriend = async (
 export const addExpense = async (
   groupId: string,
   paidBy: string,
+  padiFor: string,
   amount: number,
   splitBetween: string[],
   description: string,
@@ -232,38 +233,81 @@ export const addExpense = async (
     throw new Error(`Failed to add expense: ${error}`);
   }
 };
+
 export const addFriendExpense = async (
-  // Renamed function
   paidBy: string,
+  paidFor: string,
   amount: number,
   splitBetween: string[],
   description: string,
   friendId: string,
-) => {
+): Promise<string> => {
   try {
-    if (!paidBy || amount <= 0 || splitBetween.length === 0 || !friendId) {
-      throw new Error('Invalid friend expense parameters');
-    }
-
     const expenseData = {
       paidBy,
-      amount: Number(amount.toFixed(2)),
+      amount,
       splitBetween,
       description,
       friendId,
+      paidFor,
       createdAt: serverTimestamp(),
       settled: false,
     };
 
-    const expenseRef = await addDoc(
-      collection(db, 'friend_expenses'),
-      expenseData,
-    );
-
-    return expenseRef.id;
+    const docRef = await addDoc(collection(db, 'friend_expenses'), expenseData);
+    return docRef.id;
   } catch (error) {
     console.error('Error adding friend expense:', error);
-    throw new Error(`Failed to add friend expense: ${error}`);
+    throw new Error('Failed to add expense');
+  }
+};
+export const calculateFriendBalance = async (
+  userId: string,
+  friendId: string,
+) => {
+  let balance = 0;
+
+  try {
+    const groupExpensesSnap = await getDocs(
+      query(
+        collection(db, 'expenses'),
+        where('splitBetween', 'array-contains', userId),
+      ),
+    );
+
+    groupExpensesSnap.forEach(docSnap => {
+      const expense = docSnap.data();
+      const isFriendInvolved = expense.splitBetween.includes(friendId);
+      if (isFriendInvolved) {
+        const share = expense.amount / expense.splitBetween.length;
+        if (expense.paidBy === userId) {
+          balance += share;
+        } else if (expense.paidBy === friendId) {
+          balance -= share;
+        }
+      }
+    });
+
+    const friendExpensesSnap = await getDocs(
+      query(
+        collection(db, 'friend_expenses'),
+        where('friendId', '==', friendId),
+      ),
+    );
+
+    friendExpensesSnap.forEach(docSnap => {
+      const expense = docSnap.data();
+      if (expense.paidBy === userId) {
+        balance += expense.amount / expense.splitBetween.length;
+      } else if (expense.paidBy === friendId) {
+        balance -= expense.amount / expense.splitBetween.length;
+      }
+    });
+
+    return balance;
+  } catch (error) {
+    console.error('Error calculating balance:', error);
+    return 0;
   }
 };
 

@@ -11,13 +11,14 @@ import Home from './src/Screens/Home';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GroupScreen from './src/Screens/GroupScrren';
 import CreateGroup from './src/Screens/CreateGroup';
-import FriendsScreen from './src/Screens/FriendsScreen';
+
 import FriendRequest from './src/Screens/FriendRequest';
 import {RootStackParamList} from './src/types/types';
 import GroupDetailsScreen from './src/Screens/GroupDetailsScreen';
 import ExpenseeScreen from './src/Screens/ExpenseeScreen';
 import AddFriendExpense from './src/Screens/AddFriendExpense';
 import FriendExpenseDetails from './src/Screens/FriendExpenseDetails';
+import FriendsScreen from './src/Screens/FriendsScreen';
 
 // Define the root stack parameter list
 
