@@ -3,17 +3,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define the auth state type
 interface AuthState {
+  photo: string;
+  phone: string;
+  name: string;
   userId: string | null;
   email: string | null;
   photoURL: string | null;
   loading: boolean;
   isAuthenticated: boolean;
 }
+
 export interface LoggedInUser {
   userId: string | null;
   email: string | null;
   photoURL: string | null;
 }
+
 // Load auth state from AsyncStorage
 export const loadAuthState = createAsyncThunk(
   'auth/loadAuthState',
@@ -22,6 +27,8 @@ export const loadAuthState = createAsyncThunk(
       const userId = await AsyncStorage.getItem('userId');
       const email = await AsyncStorage.getItem('email');
       const photoURL = await AsyncStorage.getItem('profilePicture');
+
+      console.log('Loading auth state - userId:', userId);
 
       return {
         userId: userId ?? null,
@@ -41,12 +48,45 @@ export const loadAuthState = createAsyncThunk(
   },
 );
 
+// Save auth state to AsyncStorage
+const saveAuthData = async (
+  userId: string | null,
+  email: string | null,
+  photoURL: string | null,
+) => {
+  try {
+    if (userId) {
+      await AsyncStorage.setItem('userId', userId);
+      console.log('Saved userId to AsyncStorage:', userId);
+    } else {
+      await AsyncStorage.removeItem('userId');
+    }
+
+    if (email) {
+      await AsyncStorage.setItem('email', email);
+    } else {
+      await AsyncStorage.removeItem('email');
+    }
+
+    if (photoURL) {
+      await AsyncStorage.setItem('profilePicture', photoURL);
+    } else {
+      await AsyncStorage.removeItem('profilePicture');
+    }
+  } catch (error) {
+    console.error('Error saving auth data:', error);
+  }
+};
+
 const initialState: AuthState = {
   userId: null,
   email: null,
   photoURL: null,
   loading: true,
   isAuthenticated: false,
+  photo: '',
+  phone: '',
+  name: '',
 };
 
 const authSlice = createSlice({
@@ -54,17 +94,22 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     login: (state, action) => {
+      if (!action.payload.userId) {
+        console.error('Attempted login without userId');
+        return;
+      }
+
       state.userId = action.payload.userId;
       state.email = action.payload.email;
       state.photoURL = action.payload.photoURL;
       state.isAuthenticated = true;
 
-      // Store minimal auth data in AsyncStorage
-      AsyncStorage.setItem('userId', action.payload.userId);
-      AsyncStorage.setItem('email', action.payload.email);
-      if (action.payload.photoURL) {
-        AsyncStorage.setItem('profilePicture', action.payload.photoURL);
-      }
+      // Store auth data in AsyncStorage
+      saveAuthData(
+        action.payload.userId,
+        action.payload.email,
+        action.payload.photoURL,
+      );
     },
     logout: state => {
       // Clear state
@@ -74,13 +119,12 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
 
       // Clear AsyncStorage auth data
-      AsyncStorage.removeItem('userId');
-      AsyncStorage.removeItem('email');
-      AsyncStorage.removeItem('profilePicture');
+      saveAuthData(null, null, null);
     },
     updateProfile: (state, action) => {
       if (action.payload.photoURL) {
         state.photoURL = action.payload.photoURL;
+        // Only update the photoURL in AsyncStorage
         AsyncStorage.setItem('profilePicture', action.payload.photoURL);
       }
     },

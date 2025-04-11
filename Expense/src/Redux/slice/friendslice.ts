@@ -8,6 +8,9 @@ import {
   serverTimestamp,
   where,
   onSnapshot,
+  getDocs,
+  DocumentData,
+  QuerySnapshot,
 } from 'firebase/firestore';
 import {db} from '../../services/firestore';
 
@@ -22,7 +25,6 @@ const initialState: FriendsState = {
   loading: false,
   error: null,
 };
-
 export const addFriend = createAsyncThunk(
   'friends/addFriend',
   async (
@@ -43,12 +45,52 @@ export const addFriend = createAsyncThunk(
         throw new Error('Friend already exists');
       }
 
+      // Fetch friend's user document
+      const friendUserQuery = query(
+        collection(db, 'users'),
+        where('userId', '==', friendId),
+      );
+      const friendUserSnapshot = await getDocs(friendUserQuery);
+
+      if (friendUserSnapshot.empty) {
+        throw new Error('Friend user not found.');
+      }
+
+      const friendUserData = friendUserSnapshot.docs[0].data();
+      const friendName = friendUserData.name || friend.name;
+      const friendPhone = friendUserData.phone || friend.phone || '';
+      const friendPhoto = friendUserData.photo || friend.photo || '';
+
+      // Add friend to current user's friend list
       await addDoc(collection(db, 'friends'), {
         userId: userId,
         friendId: friendId,
-        name: friend.name,
-        phone: friend.phone,
-        photo: friend.photo,
+        name: friendName, // Use fetched friend name
+        phone: friendPhone, // Use fetched friend phone
+        photo: friendPhoto, // Use fetched friend photo
+        createdAt: serverTimestamp(),
+      });
+
+      // Fetch current user's data
+      const currentUserQuery = query(
+        collection(db, 'users'),
+        where('userId', '==', userId),
+      );
+      const currentUserSnapshot = await getDocs(currentUserQuery);
+
+      if (currentUserSnapshot.empty) {
+        throw new Error('Current user not found.');
+      }
+
+      const currentUserData = currentUserSnapshot.docs[0].data();
+
+      // Add current user to friend's friend list
+      await addDoc(collection(db, 'friends'), {
+        userId: friendId, // Friend's ID as the owner
+        friendId: userId, // Current user as the friend
+        name: currentUserData.name || 'User', // Current user's name
+        phone: currentUserData.phone || '', // Current user's phone
+        photo: currentUserData.photo || '', // Current user's photo
         createdAt: serverTimestamp(),
       });
 
@@ -58,10 +100,12 @@ export const addFriend = createAsyncThunk(
     }
   },
 );
-
+// Updated fetchFriends in friendslice.js
+// Updated fetchFriends in friendslice.js
+// Updated fetchFriends in friendslice.js
 export const fetchFriends = createAsyncThunk(
   'friends/fetchFriends',
-  async (userId, {dispatch, rejectWithValue}) => {
+  async (userId, {dispatch, rejectWithValue, getState}) => {
     try {
       console.log('Fetch_Friends___');
       console.log('User_ID', userId);
@@ -70,38 +114,73 @@ export const fetchFriends = createAsyncThunk(
         return [];
       }
 
-      const friendsQuery = query(
+      const friendsQuery1 = query(
         collection(db, 'friends'),
         where('userId', '==', userId),
       );
 
-      return new Promise<void>((resolve, reject) => {
-        const unsubscribe = onSnapshot(
-          friendsQuery,
-          snapshot => {
-            const friendsList = snapshot.docs.map(docSnap => {
-              const data = docSnap.data();
-              console.log('Doc_Data', data);
-              return {
-                userId: data.friendId,
-                name: data.name,
-                phone: data.phone,
-                photo: data.photo,
-              } as Friend;
-            });
+      const friendsQuery2 = query(
+        collection(db, 'friends'),
+        where('friendId', '==', userId),
+      );
 
-            console.log('Realtime friends update:', friendsList);
-            dispatch(setFriends(friendsList)); // Dispatch action to update Redux store
-            resolve();
-          },
-          error => {
-            console.error('error fetching friends:', error.message, error.code);
-            reject(rejectWithValue(error.message || 'Error fetching friends'));
-          },
-        );
+      return new Promise<void>(async (resolve, reject) => {
+        let allFriends: Friend[] = [];
 
-        // Return the unsubscribe function to allow cleanup
-        return unsubscribe;
+        const processSnapshot = async (
+          snapshot: QuerySnapshot<DocumentData, DocumentData>,
+        ) => {
+          const friendsList = snapshot.docs.map((docSnap: {data: () => any}) =>
+            docSnap.data(),
+          );
+
+          for (const friendData of friendsList) {
+            const friendId =
+              friendData.userId === userId
+                ? friendData.friendId
+                : friendData.userId;
+
+            try {
+              const userQuery = query(
+                collection(db, 'users'),
+                where('userId', '==', friendId),
+              );
+              const userSnapshot = await getDocs(userQuery);
+
+              if (!userSnapshot.empty) {
+                const userData = userSnapshot.docs[0].data();
+                allFriends.push({
+                  userId: friendId,
+                  name: userData.name,
+                  phone: userData.phone,
+                  photo: userData.photo,
+                } as Friend);
+              }
+            } catch (userError) {
+              console.error('Error fetching user data:', userError);
+            }
+          }
+        };
+
+        try {
+          const snapshot1 = await getDocs(friendsQuery1);
+          await processSnapshot(snapshot1);
+
+          const snapshot2 = await getDocs(friendsQuery2);
+          await processSnapshot(snapshot2);
+
+          const uniqueFriends = allFriends.filter(
+            (friend, index, self) =>
+              index === self.findIndex(f => f.userId === friend.userId),
+          );
+
+          console.log('Realtime friends update:', uniqueFriends);
+          dispatch(setFriends(uniqueFriends));
+          resolve();
+        } catch (error) {
+          console.error('error fetching friends:', error, error);
+          reject(rejectWithValue(error || 'Error fetching friends'));
+        }
       });
     } catch (error: any) {
       console.error('error fetching friends:', error.message, error.code);
@@ -109,7 +188,6 @@ export const fetchFriends = createAsyncThunk(
     }
   },
 );
-
 const friendsSlice = createSlice({
   name: 'friends',
   initialState,

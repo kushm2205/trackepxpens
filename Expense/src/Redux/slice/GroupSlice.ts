@@ -20,7 +20,7 @@ import {
   FirebaseUser,
   Contact,
   PhoneNumber,
-  Group,
+  group,
   AddExpensePayload,
   CreateGroupPayload,
 } from '../../types/types';
@@ -29,59 +29,48 @@ import {ThemeContext, ThemeProvider} from '@react-navigation/native';
 import {calculateShares} from '../../utils/Expenssutils';
 
 export const fetchGroups = createAsyncThunk<
-  Group[],
-  void,
+  group[],
+  string | void,
   {rejectValue: string}
->('group/fetchGroups', async (_, {rejectWithValue}) => {
+>('group/fetchGroups', async (userId, {rejectWithValue}) => {
   try {
-    console.log(auth);
+    console.log('Starting fetchGroups...');
     const currentUser = auth.currentUser;
-    console.log(currentUser);
-    if (!currentUser) {
+    const userIdToUse = userId || currentUser?.uid;
+
+    console.log('Using userId for query:', userIdToUse);
+    if (!userIdToUse) {
+      console.log('No user ID available to query groups');
       return rejectWithValue('User not authenticated');
     }
 
     const groupsQuery = query(
       collection(db, 'groups'),
-      where('members', 'array-contains', currentUser.uid),
+      where('members', 'array-contains', userIdToUse),
     );
 
-    // Add a timeout to handle potential Firebase issues
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), 10000);
-    });
-
-    const groupsPromise = getDocs(groupsQuery);
-
-    // Race between the request and a timeout
-    const groupsSnapshot = await Promise.race([
-      groupsPromise,
-      timeoutPromise,
-    ]).catch(error => {
-      console.error('Error in groups query:', error);
-      throw error;
-    });
-
-    // If the promise resolved but groupsSnapshot isn't valid, handle gracefully
-    if (!groupsSnapshot || typeof groupsSnapshot.docs === 'undefined') {
-      console.error('Invalid response from Firestore');
-      return rejectWithValue('Failed to fetch groups: Invalid response');
-    }
+    console.log('Executing Firestore query...');
+    const groupsSnapshot = await getDocs(groupsQuery);
+    console.log(`Query returned ${groupsSnapshot.docs.length} documents`);
 
     const groupsList = await Promise.all(
       groupsSnapshot.docs.map(async doc => {
         const groupData = doc.data();
         const membersCount = groupData.members ? groupData.members.length : 0;
+        console.log(
+          `Processing group: ${doc.id}, name: ${groupData.groupName}`,
+        );
 
         return {
           id: doc.id,
           ...groupData,
           membersCount,
           groupImageUrl: groupData.groupImage || null,
-        } as Group;
+        } as group;
       }),
     );
 
+    console.log(`Returning ${groupsList.length} groups`);
     return groupsList;
   } catch (error) {
     console.error('Error fetching groups:', error);
@@ -92,7 +81,6 @@ export const fetchGroups = createAsyncThunk<
     );
   }
 });
-
 export const fetchUsers = createAsyncThunk<
   FirebaseUser[],
   void,
@@ -119,7 +107,7 @@ export const fetchUsers = createAsyncThunk<
 });
 
 export const createNewGroup = createAsyncThunk<
-  Group,
+  group,
   CreateGroupPayload,
   {rejectValue: string; state: RootState}
 >(
@@ -158,7 +146,7 @@ export const createNewGroup = createAsyncThunk<
         ...groupData,
         membersCount: uniqueMembers.length,
         groupImageUrl: groupImage,
-      } as Group;
+      } as group;
     } catch (error) {
       console.error('Error creating group:', error);
       return rejectWithValue('Failed to create group: ' + error);
@@ -231,7 +219,7 @@ export const searchContactsAndUsers = createAsyncThunk<
 );
 
 export const fetchGroupDetails = createAsyncThunk<
-  Group,
+  group,
   string,
   {rejectValue: string}
 >('group/fetchGroupDetails', async (groupId, {rejectWithValue}) => {
@@ -245,7 +233,7 @@ export const fetchGroupDetails = createAsyncThunk<
         ...groupData,
         membersCount,
         groupImageUrl: groupData.groupImage || null,
-      } as Group;
+      } as group;
     } else {
       return rejectWithValue('Group not found');
     }
@@ -371,8 +359,8 @@ const groupSlice = createSlice({
       state.error = null;
     });
     builder.addCase(fetchGroups.fulfilled, (state, action) => {
-      state.groups = action.payload;
       state.loading = false;
+      state.groups = action.payload || [];
     });
     builder.addCase(fetchGroups.rejected, (state, action) => {
       state.loading = false;

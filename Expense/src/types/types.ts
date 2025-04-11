@@ -54,7 +54,7 @@ export interface DeviceContact {
 export type Contact = FirebaseUser | DeviceContact;
 
 // Group types
-export interface Group {
+export interface group {
   id: string;
   groupName: string;
   admin: string;
@@ -76,14 +76,14 @@ interface ContactItem {
   isFirebaseUser?: boolean;
 }
 interface GroupState {
-  groups: Group[];
+  groups: group[];
   selectedMembers: string[];
   searchResults: Contact[];
   deviceContacts: DeviceContact[];
   users: FirebaseUser[];
   loading: boolean;
   error: string | null;
-  selectedGroup: Group | null;
+  selectedGroup: group | null;
   memberNames: Record<string, string>;
   balances: Record<string, Record<string, Record<string, number>>>;
 }

@@ -12,15 +12,8 @@ import {Friend, RootStackParamList} from '../types/types';
 import {useSelector} from 'react-redux';
 import {RootState} from '../Redux/store';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  onSnapshot,
-} from 'firebase/firestore';
+import {collection, query, where, onSnapshot} from 'firebase/firestore';
 import {db} from '../services/firestore';
-import auth from '@react-native-firebase/auth';
 
 type FriendExpenseListRouteProp = {
   friend: Friend;
@@ -37,10 +30,15 @@ const AddFriendExpense = () => {
     const fetchExpenses = async () => {
       if (!loggedInUserId) return;
 
+      const friendId = friend.userId || friend.phone;
+
+      // This query will find all expenses where:
+      // 1. The logged-in user is part of the split
+      // 2. The friendId is set to the current friend's ID
       const expensesQuery = query(
         collection(db, 'friend_expenses'),
         where('splitBetween', 'array-contains', loggedInUserId),
-        where('friendId', '==', friend.userId || friend.phone),
+        where('friendId', '==', friendId),
       );
 
       const unsubscribe = onSnapshot(expensesQuery, querySnapshot => {
@@ -48,10 +46,13 @@ const AddFriendExpense = () => {
           id: doc.id,
           ...doc.data(),
         }));
+        console.log(
+          `Found ${fetchedExpenses.length} expenses with ${friend.name}`,
+        );
         setExpenses(fetchedExpenses);
       });
 
-      return () => unsubscribe(); // Cleanup the listener when the component unmounts
+      return () => unsubscribe();
     };
 
     fetchExpenses();
@@ -84,6 +85,7 @@ const AddFriendExpense = () => {
       </View>
     );
   };
+
   useEffect(() => {
     let owed = 0;
     expenses.forEach(expense => {

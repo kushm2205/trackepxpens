@@ -196,7 +196,7 @@ export const addFriend = async (
 export const addExpense = async (
   groupId: string,
   paidBy: string,
-  padiFor: string,
+
   amount: number,
   splitBetween: string[],
   description: string,
@@ -213,7 +213,7 @@ export const addExpense = async (
     const expenseData = {
       groupId,
       paidBy,
-      amount: Number(amount.toFixed(2)),
+      amount: Number(amount),
       splitBetween,
       description,
       createdAt: serverTimestamp(),
@@ -233,29 +233,54 @@ export const addExpense = async (
     throw new Error(`Failed to add expense: ${error}`);
   }
 };
-
 export const addFriendExpense = async (
   paidBy: string,
-  paidFor: string,
   amount: number,
   splitBetween: string[],
   description: string,
   friendId: string,
 ): Promise<string> => {
   try {
-    const expenseData = {
+    // Find the current user (the one who isn't the friend)
+    const currentUserId = splitBetween.find(id => id !== friendId);
+
+    if (!currentUserId) {
+      throw new Error('Current user not found in splitBetween array');
+    }
+
+    // Create TWO identical expenses, one for each user's view
+
+    // First expense - for current user's view
+    const expenseData1 = {
       paidBy,
       amount,
       splitBetween,
       description,
-      friendId,
-      paidFor,
+      friendId, // From your perspective, this is your friend
       createdAt: serverTimestamp(),
       settled: false,
     };
 
-    const docRef = await addDoc(collection(db, 'friend_expenses'), expenseData);
-    return docRef.id;
+    // Second expense - for friend's view
+    const expenseData2 = {
+      paidBy,
+      amount,
+      splitBetween,
+      description,
+      friendId: currentUserId, // From friend's perspective, you are their friend
+      createdAt: serverTimestamp(),
+      settled: false,
+    };
+
+    // Save both records to Firebase
+    const docRef1 = await addDoc(
+      collection(db, 'friend_expenses'),
+      expenseData1,
+    );
+    await addDoc(collection(db, 'friend_expenses'), expenseData2);
+
+    console.log("Added expense for both users' views");
+    return docRef1.id;
   } catch (error) {
     console.error('Error adding friend expense:', error);
     throw new Error('Failed to add expense');

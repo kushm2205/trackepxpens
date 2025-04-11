@@ -30,7 +30,7 @@ const AccountScreen: React.FC = () => {
   const navigation = useNavigation<AccountScreenNavigationProp>();
   const {userId} = useSelector((state: RootState) => state.auth);
 
-  const groupData = useSelector((state: RootState) => state.Group);
+  const groupData = useSelector((state: RootState) => state.group);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

@@ -31,8 +31,8 @@ const FriendsScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
   const friends = useSelector(selectFriends);
   const loading = useSelector(selectFriendsLoading);
-  const {userId} = useSelector((state: RootState) => state.auth);
 
+  const {userId} = useSelector((state: RootState) => state.auth);
   const [friendBalances, setFriendBalances] = useState<Record<string, number>>(
     {},
   );
@@ -124,11 +124,16 @@ const FriendsScreen = () => {
     if (friends.length > 0 && userId) {
       calculateBalances();
     }
+
+    if (friends.length > 0 && userId) {
+      calculateBalances();
+    }
   }, [friends, userId]);
 
   const renderFriend = ({item}: {item: Friend}) => {
     const friendId = item.userId ?? item.phone;
     const balance = friendId ? friendBalances[friendId] ?? 0 : 0;
+    const displayName = friendId === userId ? 'You' : item.name;
 
     return (
       <Pressable onPress={() => handleAddExpense(item)}>
@@ -140,7 +145,7 @@ const FriendsScreen = () => {
             style={styles.friendImage}
           />
           <View style={styles.friendDetails}>
-            <Text style={styles.friendName}>{item.name}</Text>
+            <Text style={styles.friendName}>{displayName}</Text>
             <Text style={styles.friendPhone}>{item.phone}</Text>
             <Text
               style={[

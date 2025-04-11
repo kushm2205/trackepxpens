@@ -21,16 +21,16 @@ const firebaseConfig = {
   apiKey:
     Platform.OS === 'ios'
       ? 'AIzaSyCIY560R83mJGCu8ili9Z523ijjLXHKjW0'
-      : 'AIzaSyCymkhJ9f1avJP0xk6ofBanslQrur7RLsE',
-  authDomain: 'expense-tracker-d353d.firebaseapp.com',
-  projectId: 'expense-tracker-d353d',
-  storageBucket: 'expense-tracker-d353d.appspot.com',
+      : 'AIzaSyC_1zSM9CCHHGBjND7elDlW1GDM9BUsvnQ',
+  authDomain: 'expenss-fc1b4.firebaseapp.com',
+  projectId: 'expenss-fc1b4',
+  storageBucket: 'expenss-fc1b4.firebasestorage.app',
   messagingSenderId: '341927006678',
   appId:
     Platform.OS === 'ios'
       ? '1:341927006678:ios:6932be5b8b1bed2dffd477'
-      : '1:341927006678:android:1d37b38f48fa7768ffd477',
-  databaseURL: 'https://expense-tracker-d353d.firebaseio.com',
+      : '1:270497481638:android:f5de1b3f6509f4f0a50567',
+  databaseURL: 'https://expenss-fc1b4.firebaseio.com',
 };
 
 const app =

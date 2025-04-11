@@ -54,7 +54,10 @@ const Signup: React.FC = () => {
         },
       );
 
+      console.log('---------', response.status);
+
       if (response.status === 200) {
+        console.log('---------', response.status);
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           email,

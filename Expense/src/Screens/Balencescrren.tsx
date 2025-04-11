@@ -4,7 +4,7 @@ import {useSelector} from 'react-redux';
 
 const TransactionHistory = ({groupId}) => {
   const transactions = useSelector(state =>
-    state.Group.transactions
+    state.group.transactions
       .filter(t => t.groupId === groupId)
       .sort((a, b) => b.createdAt - a.createdAt),
   );

@@ -58,7 +58,7 @@ const GroupDetailsScreen: React.FC = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation<GroupDetailsScreenNavigationProp>();
   const {selectedGroup, loading, error, memberNames} = useSelector(
-    (state: RootState) => state.Group,
+    (state: RootState) => state.group,
   );
   const {userId: currentUserId} = useSelector((state: RootState) => state.auth);
   const route = useRoute<GroupDetailsScreenRouteProp>();

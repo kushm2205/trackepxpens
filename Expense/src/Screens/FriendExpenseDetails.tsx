@@ -56,7 +56,7 @@ const FriendExpenseDetails = () => {
     const paidBy =
       paidBySelection === 'user'
         ? loggedInUser.userId || ''
-        : friend.userId || friend.phone || ''; // Get the correct paid by user.
+        : friend.userId || friend.phone || '';
 
     const splitBetween: string[] = [];
     if (splitWithFriend) {
@@ -69,7 +69,6 @@ const FriendExpenseDetails = () => {
     dispatch(
       addFriendExpenseThunk({
         paidBy: paidBy,
-        paidFor: paidFor,
         amount: parseFloat(amount),
         splitBetween,
         description,
@@ -158,7 +157,6 @@ const FriendExpenseDetails = () => {
 };
 
 export default FriendExpenseDetails;
-// ... keep your existing styles ...
 
 const styles = StyleSheet.create({
   safeArea: {

@@ -8,7 +8,7 @@ import friendExpensesReducer from '../Redux/slice/expnseSlice'; // Corrected imp
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    Group: groupreducer,
+    group: groupreducer,
     friends: friendsReducer,
     friendExpenses: friendExpensesReducer, // Corrected reducer name
   },

@@ -35,7 +35,7 @@ type CreateGroupProp = StackNavigationProp<RootStackParamList, 'CreateGroup'>;
 const CreateGroup = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {users, deviceContacts, selectedMembers, searchResults, loading} =
-    useSelector((state: RootState) => state.Group);
+    useSelector((state: RootState) => state.group);
   const {userId, photoURL} = useSelector((state: RootState) => state.auth);
 
   const navigation = useNavigation<CreateGroupProp>();
@@ -45,7 +45,9 @@ const CreateGroup = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  const currentUser = users.find(user => user.id === userId);
+  const currentUser = users.find(
+    (user: {id: string | null}) => user.id === userId,
+  );
 
   useEffect(() => {
     console.log('Fetching users and contacts');

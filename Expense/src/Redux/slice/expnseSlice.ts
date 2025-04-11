@@ -11,7 +11,6 @@ interface FriendExpense {
   description: string;
   createdAt: any;
   settled: boolean;
-  paidFor: string;
 }
 
 interface FriendExpensesState {
@@ -27,7 +26,6 @@ const initialState: FriendExpensesState = {
   loading: false,
   error: null,
 };
-
 export const addFriendExpenseThunk = createAsyncThunk(
   'friendExpenses/addFriendExpense',
   async (
@@ -37,14 +35,13 @@ export const addFriendExpenseThunk = createAsyncThunk(
       splitBetween,
       description,
       friendId,
-      paidFor,
     }: Omit<FriendExpense, 'createdAt' | 'settled'>,
     {rejectWithValue},
   ) => {
     try {
+      // This will now create TWO expense documents, one for each user
       const expenseId = await addFriendExpense(
         paidBy,
-        paidFor,
         amount,
         splitBetween,
         description,
@@ -54,7 +51,6 @@ export const addFriendExpenseThunk = createAsyncThunk(
       const newExpense: FriendExpense = {
         friendId,
         paidBy,
-        paidFor,
         amount,
         splitBetween,
         description,
@@ -68,7 +64,6 @@ export const addFriendExpenseThunk = createAsyncThunk(
     }
   },
 );
-
 const friendExpensesSlice = createSlice({
   name: 'friendExpenses',
   initialState,

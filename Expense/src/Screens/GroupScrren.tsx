@@ -23,46 +23,32 @@ type GroupScreenProp = StackNavigationProp<RootStackParamList, 'GroupScreen'>;
 const GroupScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {groups, loading, error} = useSelector(
-    (state: RootState) => state.Group,
+    (state: RootState) => state.group,
   );
   const authState = useSelector((state: RootState) => state.auth);
   const navigation = useNavigation<GroupScreenProp>();
   const [authChecked, setAuthChecked] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
 
+  console.log('Groups from Redux:', groups);
+  console.log('Auth state:', authState);
+  console.log('Firebase auth current user:', auth.currentUser?.uid);
+
   useEffect(() => {
-    let isMounted = true;
-
-    const unsubscribe = auth.onAuthStateChanged(async user => {
-      if (!isMounted) return;
-
-      setAuthChecked(true);
-
-      if (user) {
-        try {
-          await user.getIdToken(true);
-          setTimeout(() => {
-            if (isMounted) {
-              dispatch(fetchGroups());
-            }
-          }, 5000);
-        } catch (error) {
-          console.error('Failed to refresh token:', error);
-        }
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      unsubscribe();
-    };
-  }, [dispatch, retryAttempt]);
+    // If the user is authenticated in Redux but not in Firebase,
+    // we need to manually fetch groups using the Redux user ID
+    if (authState.isAuthenticated && authState.userId && !loading && !error) {
+      console.log('Fetching groups with userId from Redux:', authState.userId);
+      dispatch(fetchGroups(authState.userId));
+    }
+  }, [authState.isAuthenticated, authState.userId, dispatch, retryAttempt]);
 
   const handleCreateGroupPress = () => {
     navigation.navigate('CreateGroup');
   };
 
   const handleRetry = () => {
+    console.log('Retrying group fetch...');
     setRetryAttempt(prev => prev + 1);
   };
 
@@ -86,7 +72,7 @@ const GroupScreen = () => {
     </TouchableOpacity>
   );
 
-  if (!authChecked || authState.loading) {
+  if (authState.loading) {
     return (
       <View style={styles.authContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -110,27 +96,26 @@ const GroupScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Groups</Text>
-
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0000ff" />
           <Text style={styles.statusText}>Loading groups...</Text>
         </View>
       )}
-
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <Button title="Retry" onPress={handleRetry} />
         </View>
       )}
-
-      {!loading && groups && groups.length === 0 && !error && (
-        <Text style={styles.statusText}>
-          No groups found. Create your first group!
-        </Text>
+      {!loading && (!groups || groups.length === 0) && !error && (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.statusText}>
+            No groups found. Create your first group!
+          </Text>
+          <Button title="Create New Group" onPress={handleCreateGroupPress} />
+        </View>
       )}
-
       {!loading && groups && groups.length > 0 && (
         <FlatList
           data={groups}
@@ -139,10 +124,11 @@ const GroupScreen = () => {
           style={styles.groupsList}
         />
       )}
-
+      (
       <View style={styles.buttonContainer}>
         <Button title="Create New Group" onPress={handleCreateGroupPress} />
       </View>
+      )
     </View>
   );
 };
@@ -210,6 +196,11 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     marginVertical: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

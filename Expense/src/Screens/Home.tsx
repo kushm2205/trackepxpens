@@ -14,10 +14,10 @@ const Home: React.FC = () => {
     <Tab.Navigator
       screenOptions={({route}) => ({
         tabBarIcon: ({color, size}) => {
-          let iconName = 'help-circle-outline';
+          let iconName = '';
 
           switch (route.name) {
-            case 'Groups':
+            case 'Group':
               iconName = 'people-outline';
               break;
             case 'Friends':

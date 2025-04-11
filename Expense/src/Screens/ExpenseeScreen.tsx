@@ -35,7 +35,7 @@ const AddExpenseScreen: React.FC = () => {
   const route = useRoute<AddExpenseScreenRouteProp>();
   const {groupId} = route.params;
   const {selectedGroup, memberNames, loading, error} = useSelector(
-    (state: RootState) => state.Group,
+    (state: RootState) => state.group,
   );
 
   const [description, setDescription] = useState('');
