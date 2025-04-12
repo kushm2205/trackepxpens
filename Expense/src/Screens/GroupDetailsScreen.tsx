@@ -8,21 +8,30 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {useSelector, useDispatch} from 'react-redux';
 import {RootState} from '../Redux/store';
 import {fetchGroupDetails, fetchUserDetails} from '../Redux/slice/GroupSlice';
 import {RouteProp, useRoute, useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {collection, query, where, onSnapshot} from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  writeBatch,
+  doc,
+} from 'firebase/firestore';
 import {db} from '../services/firestore';
 import {format} from 'date-fns';
 import {calculateSettlements} from '../utils/Expenssutils';
-
-type RootStackParamList = {
-  GroupDetails: {groupId: string};
-  AddExpense: {groupId: string};
-};
+import {
+  RootStackParamList,
+  Settlement,
+  MemberBalance,
+  Expense,
+} from '../types/types';
 
 type GroupDetailsScreenRouteProp = RouteProp<
   RootStackParamList,
@@ -32,27 +41,6 @@ type GroupDetailsScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'GroupDetails'
 >;
-
-interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  paidBy: string;
-  splitBetween: string[];
-  createdAt: any;
-}
-
-interface MemberBalance {
-  memberId: string;
-  name: string;
-  balance: number;
-}
-
-interface Settlement {
-  from: string;
-  to: string;
-  amount: number;
-}
 
 const GroupDetailsScreen: React.FC = () => {
   const dispatch = useDispatch();
@@ -84,7 +72,6 @@ const GroupDetailsScreen: React.FC = () => {
     const unsubscribe = onSnapshot(expensesQuery, querySnapshot => {
       const expensesData: Expense[] = [];
       querySnapshot.forEach(doc => {
-        console.log('doc_Data', doc.data());
         const data = doc.data();
         expensesData.push({
           id: doc.id,
@@ -93,6 +80,8 @@ const GroupDetailsScreen: React.FC = () => {
           paidBy: data.paidBy,
           splitBetween: data.splitBetween,
           createdAt: data.createdAt?.toDate() || new Date(),
+          groupId: null,
+          isFriendExpense: false,
         });
       });
 
@@ -123,38 +112,29 @@ const GroupDetailsScreen: React.FC = () => {
   const calculateBalances = () => {
     const balances: Record<string, number> = {};
 
-    // Initialize all members with 0 balance
     selectedGroup?.members.forEach((memberId: string) => {
       balances[memberId] = 0;
     });
 
-    // Calculate balances from expenses
     expenses.forEach(expense => {
-      // Ensure the payer is included in splitBetween
       const participants = expense.splitBetween.includes(expense.paidBy)
         ? expense.splitBetween
         : [...expense.splitBetween, expense.paidBy];
 
       const sharePerPerson = expense.amount / participants.length;
 
-      // Add the full amount to the person who paid
       balances[expense.paidBy] += expense.amount;
 
-      // Subtract each person's share (including the payer if they're in the split)
       participants.forEach(memberId => {
         balances[memberId] -= sharePerPerson;
       });
     });
 
-    // Calculate user's total balance
     if (currentUserId && balances[currentUserId]) {
       setTotalBalance(balances[currentUserId]);
     }
 
-    // Calculate settlement transactions
     const settlements = calculateSettlements(balances);
-
-    // Filter settlements related to current user
     if (currentUserId) {
       const userSettlements = settlements.filter(
         s => s.from === currentUserId || s.to === currentUserId,
@@ -162,7 +142,6 @@ const GroupDetailsScreen: React.FC = () => {
       setUserTransactions(userSettlements);
     }
 
-    // Convert to array and sort by balance
     const balanceArray: MemberBalance[] = Object.entries(balances)
       .map(([memberId, balance]) => ({
         memberId,
@@ -178,32 +157,79 @@ const GroupDetailsScreen: React.FC = () => {
     navigation.navigate('AddExpense', {groupId: groupId});
   };
 
+  const handleSettleUp = async () => {
+    if (expenses.length === 0) {
+      Alert.alert('No expenses to settle');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Settlement',
+      `Are you sure you want to clear all ${expenses.length} expenses in this group? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Settle Up',
+          onPress: async () => {
+            try {
+              const batch = writeBatch(db);
+
+              // Add all expenses to the batch for deletion
+              expenses.forEach(expense => {
+                const expenseRef = doc(db, 'expenses', expense.id);
+                batch.delete(expenseRef);
+              });
+
+              await batch.commit();
+
+              Alert.alert('Success', 'All expenses have been settled');
+            } catch (error) {
+              console.error('Error settling up:', error);
+              Alert.alert('Error', 'Failed to settle up. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const renderExpenseItem = ({item}: {item: Expense}) => {
     const formattedDate = format(item.createdAt, 'MMM dd, yyyy');
     const paidByName = memberNames[item.paidBy] || item.paidBy;
     const isCurrentUserExpense = item.paidBy === currentUserId;
 
     return (
-      <View
-        style={[
-          styles.expenseItem,
-          isCurrentUserExpense && styles.highlightedExpense,
-        ]}>
-        <View style={styles.expenseHeader}>
-          <Text style={styles.expenseDescription}>{item.description}</Text>
-          <Text style={styles.expenseAmount}>₹{item.amount.toFixed(2)}</Text>
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate('EditExpense', {
+            groupId: groupId,
+            expenseId: item.id,
+          })
+        }>
+        <View
+          style={[
+            styles.expenseItem,
+            isCurrentUserExpense && styles.highlightedExpense,
+          ]}>
+          <View style={styles.expenseHeader}>
+            <Text style={styles.expenseDescription}>{item.description}</Text>
+            <Text style={styles.expenseAmount}>₹{item.amount.toFixed(2)}</Text>
+          </View>
+          <Text style={styles.expensePaidBy}>
+            Paid by {isCurrentUserExpense ? 'You' : paidByName}
+          </Text>
+          <Text style={styles.expenseDate}>{formattedDate}</Text>
+          <Text style={styles.expenseSplit}>
+            Split between:{' '}
+            {item.splitBetween
+              .map(id => (id === currentUserId ? 'You' : memberNames[id] || id))
+              .join(', ')}
+          </Text>
         </View>
-        <Text style={styles.expensePaidBy}>
-          Paid by {isCurrentUserExpense ? 'You' : paidByName}
-        </Text>
-        <Text style={styles.expenseDate}>{formattedDate}</Text>
-        <Text style={styles.expenseSplit}>
-          Split between:{' '}
-          {item.splitBetween
-            .map(id => (id === currentUserId ? 'You' : memberNames[id] || id))
-            .join(', ')}
-        </Text>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -212,7 +238,7 @@ const GroupDetailsScreen: React.FC = () => {
     const isPositive = item.balance > 0;
     const isZero = Math.abs(item.balance) < 0.01;
 
-    if (isCurrentUser) return null; // Skip the current user in the list
+    if (isCurrentUser) return null;
 
     return (
       <View style={styles.balanceItem}>
@@ -289,7 +315,6 @@ const GroupDetailsScreen: React.FC = () => {
 
         <Text style={styles.groupName}>{selectedGroup.groupName}</Text>
 
-        {/* Current User's Grand Total */}
         <Text style={styles.sectionTitle}>Your Balance</Text>
         <View style={styles.userBalanceContainer}>
           {totalBalance !== 0 ? (
@@ -309,7 +334,6 @@ const GroupDetailsScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Simplified Transactions for Current User */}
         {userTransactions.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Your Transactions</Text>
@@ -324,7 +348,6 @@ const GroupDetailsScreen: React.FC = () => {
           </>
         )}
 
-        {/* Overall Group Balances */}
         <Text style={styles.sectionTitle}>Group Balances</Text>
         <View style={styles.balanceContainer}>
           {memberBalances.length > 0 ? (
@@ -339,7 +362,6 @@ const GroupDetailsScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Expenses Section */}
         <Text style={styles.sectionTitle}>Expenses</Text>
         {expenses.length === 0 ? (
           <Text style={styles.noExpensesText}>No expenses yet</Text>
@@ -352,7 +374,6 @@ const GroupDetailsScreen: React.FC = () => {
           />
         )}
 
-        {/* Members Section */}
         <Text style={styles.sectionTitle}>Members</Text>
         <View style={styles.membersContainer}>
           {selectedGroup.members.map((memberId: string) => (
@@ -371,12 +392,18 @@ const GroupDetailsScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Add Expense Button */}
-      <TouchableOpacity
-        style={styles.addExpenseButton}
-        onPress={handleAddExpense}>
-        <Text style={styles.addExpenseButtonText}>Add Expense</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.settleButton]}
+          onPress={handleSettleUp}>
+          <Text style={styles.actionButtonText}>Settle Up</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.addButton]}
+          onPress={handleAddExpense}>
+          <Text style={styles.actionButtonText}>Add Expense</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -525,16 +552,16 @@ const styles = StyleSheet.create({
   balanceAmount: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ff3b30', // Default red for owes
+    color: '#ff3b30',
   },
   positiveBalance: {
-    color: '#34C759', // Green for gets back
+    color: '#34C759',
   },
   negativeBalance: {
-    color: '#ff3b30', // Red for owes
+    color: '#ff3b30',
   },
   zeroBalance: {
-    color: '#999', // Gray for zero
+    color: '#999',
   },
   transactionItem: {
     paddingVertical: 8,
@@ -575,13 +602,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#007bff',
   },
-  addExpenseButton: {
-    backgroundColor: '#007bff',
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  actionButton: {
+    flex: 1,
     padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 8,
   },
-  addExpenseButtonText: {
+  settleButton: {
+    backgroundColor: '#34C759',
+  },
+  addButton: {
+    backgroundColor: '#007bff',
+  },
+  actionButtonText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,

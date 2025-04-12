@@ -18,7 +18,6 @@ import {login} from '../Redux/slice/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {StackNavigationProp} from '@react-navigation/stack';
 
-// Define navigation type
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Signup'>;
 
 const Signup: React.FC = () => {
@@ -54,10 +53,7 @@ const Signup: React.FC = () => {
         },
       );
 
-      console.log('---------', response.status);
-
       if (response.status === 200) {
-        console.log('---------', response.status);
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           email,

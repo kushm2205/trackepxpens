@@ -13,6 +13,15 @@ export type RootStackParamList = {
   Expense: {groupId: string};
   AddFriendExpense: {friend: Friend};
   FriendExpenseDetails: {friend: Friend};
+
+  EditFriendExpenss: {
+    expense: any;
+    friend: Friend;
+    onUpdate: () => void;
+  };
+  GroupDetails: {groupId: string};
+
+  EditExpense: {groupId: string; expenseId: string};
 };
 
 export interface User {
@@ -128,3 +137,51 @@ export interface Expense {
   groupId: string | null;
   isFriendExpense: boolean;
 }
+
+export interface AuthState {
+  auth: any;
+  photo: string;
+  phone: string;
+  name: string;
+  userId: string | null;
+  email: string | null;
+  photoURL: string | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: 'group' | 'friend' | 'groupExpense' | 'friendExpense';
+  createdAt: Date;
+  createdBy: string;
+  paidBy?: string;
+  someonePaidForMe?: boolean;
+  extraDesc?: string;
+  amount?: number;
+  groupName?: string;
+  name?: string;
+  description?: string;
+  splitBetween?: string[];
+  // Add other activity properties as needed
+}
+
+export interface MemberBalance {
+  memberId: string;
+  name: string;
+  balance: number;
+}
+
+export interface Settlement {
+  from: string;
+  to: string;
+  amount: number;
+}
+export type EditExpenseRouteProp = {
+  expense: any;
+  friend: any;
+  onUpdate: () => void;
+};
+export type FriendExpenseListRouteProp = {
+  friend: Friend;
+};

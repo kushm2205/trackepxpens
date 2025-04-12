@@ -7,6 +7,7 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {useNavigation} from '@react-navigation/native';
@@ -16,10 +17,27 @@ import {
   fetchFriends,
   selectFriends,
   selectFriendsLoading,
+  removeFriend,
 } from '../Redux/slice/friendslice';
 import {Friend, RootStackParamList} from '../types/types';
-import {collection, getDocs} from 'firebase/firestore';
+import {
+  collection,
+  onSnapshot,
+  doc,
+  deleteDoc,
+  updateDoc,
+  where,
+  CollectionReference,
+  DocumentData,
+  QueryFieldFilterConstraint,
+  DocumentReference,
+  writeBatch,
+  getDocs,
+  query,
+} from 'firebase/firestore';
 import {db} from '../services/firebase';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
+import {RectButton} from 'react-native-gesture-handler';
 
 type FriendScreenProp = StackNavigationProp<
   RootStackParamList,
@@ -52,83 +70,153 @@ const FriendsScreen = () => {
   }, [dispatch, userId]);
 
   useEffect(() => {
-    const calculateBalances = async () => {
-      try {
-        const balances: Record<string, number> = {};
+    if (!userId || friends.length === 0) return;
 
-        // Get all expenses at once to reduce repetitive Firebase reads
-        const friendExpenseSnapshot = await getDocs(
-          collection(db, 'friend_expenses'),
-        );
-        const groupExpenseSnapshot = await getDocs(collection(db, 'expenses'));
+    const calculateBalances = (friendExpenses: any[], groupExpenses: any[]) => {
+      const balances: Record<string, number> = {};
 
-        for (const friend of friends) {
-          const friendId = friend.userId ?? friend.phone;
-          if (!friendId || friendId === userId) continue;
+      for (const friend of friends) {
+        const friendId = friend.userId ?? friend.phone;
+        if (!friendId || friendId === userId) continue;
 
-          let totalBalance = 0;
+        let totalBalance = 0;
 
-          // --- Friend Expenses (1-on-1) ---
-          friendExpenseSnapshot.forEach(doc => {
-            const data = doc.data();
-            const {paidBy, splitBetween, amount} = data;
+        friendExpenses.forEach(expense => {
+          const {paidBy, splitBetween, amount} = expense;
 
-            if (!Array.isArray(splitBetween) || typeof amount !== 'number')
-              return;
+          if (!Array.isArray(splitBetween)) return;
 
-            const isUserInvolved = splitBetween.includes(userId);
-            const isFriendInvolved = splitBetween.includes(friendId);
+          const isUserInvolved = splitBetween.includes(userId);
+          const isFriendInvolved = splitBetween.includes(friendId);
 
-            if (isUserInvolved && isFriendInvolved) {
-              const share = amount / splitBetween.length;
+          if (isUserInvolved && isFriendInvolved) {
+            const share = amount / splitBetween.length;
 
-              if (paidBy === userId) {
-                totalBalance += share;
-              } else if (paidBy === friendId) {
-                totalBalance -= share;
-              }
+            if (paidBy === userId) {
+              totalBalance = totalBalance + share / splitBetween.length;
+            } else if (paidBy === friendId) {
+              totalBalance = totalBalance - share / splitBetween.length;
             }
-          });
+          }
+        });
 
-          // --- Group Expenses ---
-          groupExpenseSnapshot.forEach(doc => {
-            const data = doc.data();
-            const {paidBy, splitBetween, amount} = data;
+        groupExpenses.forEach(expense => {
+          const {paidBy, splitBetween, amount} = expense;
 
-            if (!Array.isArray(splitBetween) || typeof amount !== 'number')
-              return;
+          if (!Array.isArray(splitBetween)) return;
 
-            const isUserInvolved = splitBetween.includes(userId);
-            const isFriendInvolved = splitBetween.includes(friendId);
+          const isUserInvolved = splitBetween.includes(userId);
+          const isFriendInvolved = splitBetween.includes(friendId);
 
-            if (isUserInvolved && isFriendInvolved) {
-              const share = amount / splitBetween.length;
+          if (isUserInvolved && isFriendInvolved) {
+            const share = amount / splitBetween.length;
 
-              if (paidBy === userId) {
-                totalBalance += share;
-              } else if (paidBy === friendId) {
-                totalBalance -= share;
-              }
+            if (paidBy === userId) {
+              totalBalance += share;
+            } else if (paidBy === friendId) {
+              totalBalance -= share;
             }
-          });
+          }
+        });
 
-          balances[friendId] = totalBalance;
-        }
-
-        setFriendBalances(balances);
-      } catch (error) {
-        console.error('Error calculating balances:', error);
+        balances[friendId] = totalBalance;
       }
+
+      setFriendBalances(balances);
     };
 
-    if (friends.length > 0 && userId) {
-      calculateBalances();
-    }
+    const unsubscribeFriendExpenses = onSnapshot(
+      collection(db, 'friend_expenses'),
+      snapshot => {
+        const friendExpenses = snapshot.docs.map(doc => doc.data());
 
-    if (friends.length > 0 && userId) {
-      calculateBalances();
-    }
+        onSnapshot(collection(db, 'expenses'), groupSnapshot => {
+          const groupExpenses = groupSnapshot.docs.map(doc => doc.data());
+          calculateBalances(friendExpenses, groupExpenses);
+        });
+      },
+    );
+
+    const unsubscribeGroupExpenses = onSnapshot(
+      collection(db, 'expenses'),
+      snapshot => {
+        const groupExpenses = snapshot.docs.map(doc => doc.data());
+
+        onSnapshot(collection(db, 'friend_expenses'), friendSnapshot => {
+          const friendExpenses = friendSnapshot.docs.map(doc => doc.data());
+          calculateBalances(friendExpenses, groupExpenses);
+        });
+      },
+    );
+
+    return () => {
+      unsubscribeFriendExpenses();
+      unsubscribeGroupExpenses();
+    };
   }, [friends, userId]);
+
+  const handleDeleteFriend = async (friend: Friend) => {
+    if (!userId) return;
+
+    Alert.alert(
+      'Delete Friend',
+      `Are you sure you want to remove ${friend.name}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const friendId = friend.userId ?? friend.phone;
+              if (!friendId) return;
+
+              const batch = writeBatch(db);
+
+              const friendDocRef = doc(db, 'friends', `${userId}_${friendId}`);
+              batch.delete(friendDocRef);
+
+              const expensesRef = collection(db, 'friend_expenses');
+              const q = query(
+                expensesRef,
+                where('splitBetween', 'array-contains', userId),
+              );
+
+              const querySnapshot = await getDocs(q);
+              querySnapshot.forEach(async docSnap => {
+                const expense = docSnap.data();
+                if (expense.splitBetween.includes(friendId)) {
+                  batch.delete(docSnap.ref);
+                }
+              });
+
+              await batch.commit();
+
+              dispatch(removeFriend(friend));
+            } catch (error) {
+              console.error('Deletion error:', error);
+              Alert.alert(
+                'Error',
+                'Failed to delete friend. Please try again.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+  const renderRightActions = (friend: Friend) => {
+    return (
+      <RectButton
+        style={styles.deleteButton}
+        onPress={() => handleDeleteFriend(friend)}>
+        <Text style={styles.deleteButtonText}>Delete</Text>
+      </RectButton>
+    );
+  };
 
   const renderFriend = ({item}: {item: Friend}) => {
     const friendId = item.userId ?? item.phone;
@@ -136,33 +224,37 @@ const FriendsScreen = () => {
     const displayName = friendId === userId ? 'You' : item.name;
 
     return (
-      <Pressable onPress={() => handleAddExpense(item)}>
-        <View style={styles.friendItem}>
-          <Image
-            source={
-              item.photo ? {uri: item.photo} : require('../assets/download.png')
-            }
-            style={styles.friendImage}
-          />
-          <View style={styles.friendDetails}>
-            <Text style={styles.friendName}>{displayName}</Text>
-            <Text style={styles.friendPhone}>{item.phone}</Text>
-            <Text
-              style={[
-                styles.friendBalance,
-                {
-                  color: balance < 0 ? 'red' : balance > 0 ? 'green' : 'gray',
-                },
-              ]}>
-              {balance === 0
-                ? 'Settled up'
-                : balance > 0
-                ? `Owes you ₹${balance.toFixed(2)}`
-                : `You owe ₹${Math.abs(balance).toFixed(2)}`}
-            </Text>
+      <Swipeable renderRightActions={() => renderRightActions(item)}>
+        <Pressable onPress={() => handleAddExpense(item)}>
+          <View style={styles.friendItem}>
+            <Image
+              source={
+                item.photo
+                  ? {uri: item.photo}
+                  : require('../assets/download.png')
+              }
+              style={styles.friendImage}
+            />
+            <View style={styles.friendDetails}>
+              <Text style={styles.friendName}>{displayName}</Text>
+              <Text style={styles.friendPhone}>{item.phone}</Text>
+              <Text
+                style={[
+                  styles.friendBalance,
+                  {
+                    color: balance < 0 ? 'red' : balance > 0 ? 'green' : 'gray',
+                  },
+                ]}>
+                {balance === 0
+                  ? 'Settled up'
+                  : balance > 0
+                  ? `Owes you ₹${balance.toFixed(2)}`
+                  : `You owe ₹${Math.abs(balance).toFixed(2)}`}
+              </Text>
+            </View>
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
+      </Swipeable>
     );
   };
 
@@ -196,8 +288,6 @@ const FriendsScreen = () => {
   );
 };
 
-export default FriendsScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -222,6 +312,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    backgroundColor: '#fff',
   },
   friendImage: {
     width: 50,
@@ -253,4 +344,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#777',
   },
+  deleteButton: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
 });
+
+export default FriendsScreen;

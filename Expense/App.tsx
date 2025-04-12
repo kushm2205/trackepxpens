@@ -19,6 +19,8 @@ import ExpenseeScreen from './src/Screens/ExpenseeScreen';
 import AddFriendExpense from './src/Screens/AddFriendExpense';
 import FriendExpenseDetails from './src/Screens/FriendExpenseDetails';
 import FriendsScreen from './src/Screens/FriendsScreen';
+import EditExpenseScreen from './src/Screens/EditGroupexpenss';
+import EditFriendExpenss from './src/Screens/editfriendexpenss';
 
 // Define the root stack parameter list
 
@@ -36,14 +38,16 @@ const AuthStack = () => (
 const AppStack = () => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
     <Stack.Screen name="Home" component={Home} />
-    <Stack.Screen name="GroupScreen" component={GroupScreen} />
+    {/* <Stack.Screen name="GroupScreen" component={GroupScreen} /> */}
     <Stack.Screen name="AddExpense" component={ExpenseeScreen} />
     <Stack.Screen name="CreateGroup" component={CreateGroup} />
-    <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
+    {/* <Stack.Screen name="FriendsScreen" component={FriendsScreen} /> */}
     <Stack.Screen name="AddFriendExpense" component={AddFriendExpense} />
     <Stack.Screen name="FriendRequest" component={FriendRequest} />
     <Stack.Screen name="GroupDetailsScreen" component={GroupDetailsScreen} />
+    <Stack.Screen name="EditExpense" component={EditExpenseScreen} />
 
+    <Stack.Screen name="EditFriendExpenss" component={EditFriendExpenss} />
     <Stack.Screen
       name="FriendExpenseDetails"
       component={FriendExpenseDetails}

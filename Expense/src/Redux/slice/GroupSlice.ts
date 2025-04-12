@@ -14,7 +14,10 @@ import {
   query,
 } from 'firebase/firestore';
 import {RootState} from '../store';
-import {addExpense as addExpenseToFirestore} from '../../services/firestore';
+import {
+  addExpense as addExpenseToFirestore,
+  deleteGroupFromFirestore,
+} from '../../services/firestore';
 import {
   DeviceContact,
   FirebaseUser,
@@ -131,6 +134,7 @@ export const createNewGroup = createAsyncThunk<
         timestamp: serverTimestamp(),
         groupImage: groupImage || null,
       };
+      console.log('GroupDat', groupData);
 
       const docRef = await addDoc(collection(db, 'groups'), groupData);
 
@@ -227,6 +231,7 @@ export const fetchGroupDetails = createAsyncThunk<
     const groupDoc = await getDoc(doc(db, 'groups', groupId));
     if (groupDoc.exists()) {
       const groupData = groupDoc.data();
+      console.log('Grou___Data', groupData);
       const membersCount = groupData.members ? groupData.members.length : 0;
       return {
         id: groupDoc.id,
@@ -283,6 +288,17 @@ export const addExpense = createAsyncThunk<
     } catch (error) {
       console.error('Error adding expense:', error);
       return rejectWithValue('Failed to add expense');
+    }
+  },
+);
+export const deleteGroup = createAsyncThunk(
+  'groups/deleteGroup',
+  async (groupId: string, {rejectWithValue}) => {
+    try {
+      await deleteGroupFromFirestore(groupId);
+      return groupId;
+    } catch (error: any) {
+      return rejectWithValue(error.message);
     }
   },
 );
@@ -438,6 +454,14 @@ const groupSlice = createSlice({
     });
     builder.addCase(addExpense.rejected, (state, action) => {
       state.loading = false;
+      state.error = action.payload as string;
+    });
+    builder.addCase(deleteGroup.fulfilled, (state, action) => {
+      state.groups = state.groups.filter(
+        (group: {id: string}) => group.id !== action.payload,
+      );
+    });
+    builder.addCase(deleteGroup.rejected, (state, action) => {
       state.error = action.payload as string;
     });
   },

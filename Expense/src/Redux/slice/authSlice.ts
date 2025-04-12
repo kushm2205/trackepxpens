@@ -1,17 +1,6 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Define the auth state type
-interface AuthState {
-  photo: string;
-  phone: string;
-  name: string;
-  userId: string | null;
-  email: string | null;
-  photoURL: string | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-}
+import {AuthState} from '../../types/types';
 
 export interface LoggedInUser {
   userId: string | null;
@@ -19,7 +8,6 @@ export interface LoggedInUser {
   photoURL: string | null;
 }
 
-// Load auth state from AsyncStorage
 export const loadAuthState = createAsyncThunk(
   'auth/loadAuthState',
   async () => {
@@ -87,6 +75,7 @@ const initialState: AuthState = {
   photo: '',
   phone: '',
   name: '',
+  auth: undefined,
 };
 
 const authSlice = createSlice({

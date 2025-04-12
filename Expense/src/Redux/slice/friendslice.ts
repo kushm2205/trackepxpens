@@ -196,6 +196,14 @@ const friendsSlice = createSlice({
       state.friends = action.payload;
       state.loading = false;
     },
+
+    removeFriend: (state, action: PayloadAction<Friend>) => {
+      state.friends = state.friends.filter(
+        friend =>
+          friend.userId !== action.payload.userId &&
+          friend.phone !== action.payload.phone,
+      );
+    },
   },
   extraReducers: builder => {
     builder
@@ -224,7 +232,7 @@ const friendsSlice = createSlice({
   },
 });
 
-export const {setFriends} = friendsSlice.actions;
+export const {setFriends, removeFriend} = friendsSlice.actions;
 export const selectFriends = (state: RootState) => state.friends.friends;
 export const selectFriendsLoading = (state: RootState) => state.friends.loading;
 export const selectFriendsError = (state: RootState) => state.friends.error;

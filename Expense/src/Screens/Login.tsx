@@ -38,9 +38,9 @@ const Login: React.FC = () => {
       );
       const user = userCredential.user;
       setUserId(user.uid);
-      console.log('====================================');
+
       console.log('-=-=-=-=-=', user.uid);
-      console.log('====================================');
+
       sendOtp();
     } catch (error) {
       Alert.alert('Error', 'Invalid email or password.');
@@ -74,7 +74,7 @@ const Login: React.FC = () => {
         dispatch(login({userId, email}));
 
         Alert.alert('Success', 'Login successful');
-        navigation.navigate('Home'); // ✅ Navigate to Home
+        navigation.navigate('Home');
       }
     } catch (error) {
       Alert.alert('Error', 'Invalid OTP');
