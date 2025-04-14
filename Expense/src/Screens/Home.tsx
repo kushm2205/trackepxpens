@@ -6,7 +6,7 @@ import FriendsScreen from './FriendsScreen';
 import ActivityScreen from './ActivityScreen';
 import AccountScreen from './AccountScreen';
 import GroupScrren from './GroupScrren';
-
+import PersonalExpensesScreen from './Personalexpenss';
 const Tab = createBottomTabNavigator();
 
 const Home: React.FC = () => {
@@ -22,6 +22,9 @@ const Home: React.FC = () => {
               break;
             case 'Friends':
               iconName = 'person-outline';
+              break;
+            case 'Personal':
+              iconName = 'wallet-outline';
               break;
             case 'Activity':
               iconName = 'pulse-outline';
@@ -39,6 +42,7 @@ const Home: React.FC = () => {
       })}>
       <Tab.Screen name="Group" component={GroupScrren} />
       <Tab.Screen name="Friends" component={FriendsScreen} />
+      <Tab.Screen name="Personal" component={PersonalExpensesScreen} />
       <Tab.Screen name="Activity" component={ActivityScreen} />
       <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>

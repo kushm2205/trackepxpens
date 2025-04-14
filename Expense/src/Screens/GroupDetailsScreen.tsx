@@ -301,6 +301,54 @@ const GroupDetailsScreen: React.FC = () => {
       </View>
     );
   }
+  const prepareChartData = () => {
+    if (!expenses.length) {
+      Alert.alert(
+        'No expenses',
+        'There are no expenses to display in the chart',
+      );
+      return;
+    }
+
+    // Calculate total expenses per member
+    const memberExpenses: Record<string, number> = {};
+
+    // Initialize all members with 0
+    selectedGroup?.members.forEach((memberId: string) => {
+      memberExpenses[memberId] = 0;
+    });
+
+    // Sum up expenses for each member
+    expenses.forEach(expense => {
+      memberExpenses[expense.paidBy] += expense.amount;
+    });
+
+    // Prepare data for the chart
+    const data = Object.entries(memberExpenses)
+      .filter(([_, amount]) => amount > 0) // Only show members with expenses
+      .map(([memberId, amount]) => ({
+        name: memberNames[memberId] || memberId,
+        amount,
+        color: getRandomColor(),
+        legendFontColor: '#7F7F7F',
+        legendFontSize: 15,
+      }));
+    navigation.navigate('PieChart', {
+      chartData: data,
+      groupName: selectedGroup?.groupName || 'Group',
+      memberBalances: memberBalances, // Pass the member balances array
+    });
+  };
+
+  // Helper function to generate random colors
+  const getRandomColor = () => {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -403,6 +451,10 @@ const GroupDetailsScreen: React.FC = () => {
           onPress={handleAddExpense}>
           <Text style={styles.actionButtonText}>Add Expense</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.chartButton} onPress={prepareChartData}>
+          <Text style={styles.chartButtonText}>View Expense Chart</Text>
+        </TouchableOpacity>
+        ;
       </View>
     </View>
   );
@@ -417,6 +469,19 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  chartButton: {
+    backgroundColor: '#6a1b9a',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  chartButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

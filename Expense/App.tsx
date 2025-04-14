@@ -11,7 +11,6 @@ import Home from './src/Screens/Home';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GroupScreen from './src/Screens/GroupScrren';
 import CreateGroup from './src/Screens/CreateGroup';
-
 import FriendRequest from './src/Screens/FriendRequest';
 import {RootStackParamList} from './src/types/types';
 import GroupDetailsScreen from './src/Screens/GroupDetailsScreen';
@@ -21,12 +20,12 @@ import FriendExpenseDetails from './src/Screens/FriendExpenseDetails';
 import FriendsScreen from './src/Screens/FriendsScreen';
 import EditExpenseScreen from './src/Screens/EditGroupexpenss';
 import EditFriendExpenss from './src/Screens/editfriendexpenss';
-
-// Define the root stack parameter list
+import AddPersonalExpenseScreen from './src/Screens/AddPersonExpenss';
+import PersonalExpensesScreen from './src/Screens/Personalexpenss';
+import PieChartScreen from './src/Screens/Piechart';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-// Auth stack - for screens when user is NOT logged in
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
     <Stack.Screen name="Login" component={Login} />
@@ -34,7 +33,6 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
-// App stack - for screens when user IS logged in
 const AppStack = () => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
     <Stack.Screen name="Home" component={Home} />
@@ -52,6 +50,15 @@ const AppStack = () => (
       name="FriendExpenseDetails"
       component={FriendExpenseDetails}
     />
+    <Stack.Screen
+      name="AddPersonalExpense"
+      component={AddPersonalExpenseScreen}
+    />
+    <Stack.Screen
+      name="PersonalExpensesScreen"
+      component={PersonalExpensesScreen}
+    />
+    <Stack.Screen name="PieChart" component={PieChartScreen} />
   </Stack.Navigator>
 );
 

@@ -1,83 +1,17 @@
 import express, { Request, Response } from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
-import connectDB from "./db";
-import Otp from "./models/otp";
+import connectDB from "./config/db";
+import otpRoutes from "./Router/otproutes";
+import bodyParser from "body-parser";
 
 const app = express();
+app.use(bodyParser.json());
 app.use(express.json());
 app.use(cors());
 
 connectDB();
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "kushp2224@gmail.com",
-    pass: "ptxn kpaf caul zjdf",
-  },
-});
 
-// API to send OTP via Email
-app.post("/send-otp", async (req: Request, res: Response): Promise<void> => {
-  const { email } = req.body;
-  console.log("otp");
-  if (!email) {
-    res.status(400).json({ message: "Email is required" });
-    return;
-  }
-
-  const otp = Math.floor(100000 + Math.random() * 900000);
-
-  try {
-    await Otp.findOneAndUpdate(
-      { email },
-      { otp, createdAt: new Date() },
-      { upsert: true, new: true }
-    );
-
-    console.log(`Generated OTP for ${email}: ${otp}`);
-
-    const mailOptions = {
-      from: "kushp2224@gmail.com",
-      to: email,
-      subject: "Your Verification Code",
-      text: `Your OTP code is: ${otp}`,
-    };
-
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "OTP sent successfully" });
-    return;
-  } catch (error) {
-    console.error("Error sending OTP:", error);
-    return;
-    res.status(500).json({ message: "Error sending OTP", error });
-  }
-});
-
-// API to verify OTP
-app.post("/verify-otp", async (req: Request, res: Response): Promise<void> => {
-  const { email, otp } = req.body;
-  if (!email || !otp) {
-    res.status(400).json({ message: "Email and OTP are required" });
-    return;
-  }
-
-  try {
-    const storedOtp = await Otp.findOne({ email });
-    console.log(typeof otp);
-    if (storedOtp && storedOtp.otp === otp) {
-      await Otp.deleteOne({ email });
-      res.status(200).json({ message: "OTP verified successfully" });
-      return;
-    } else {
-      res.status(400).json({ message: "Invalid OTP" });
-      return;
-    }
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    res.status(500).json({ message: "Server error" });
-    return;
-  }
-});
+app.use("/api", otpRoutes);
 
 app.listen(5000, () => console.log("Server running on port 5000"));

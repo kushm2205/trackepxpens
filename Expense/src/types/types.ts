@@ -13,15 +13,17 @@ export type RootStackParamList = {
   Expense: {groupId: string};
   AddFriendExpense: {friend: Friend};
   FriendExpenseDetails: {friend: Friend};
-
+  AddPersonalExpense: undefined;
+  PersonalExpensesScreen: undefined;
   EditFriendExpenss: {
     expense: any;
     friend: Friend;
     onUpdate: () => void;
   };
   GroupDetails: {groupId: string};
-
+  PieChart: {someData: string};
   EditExpense: {groupId: string; expenseId: string};
+  FriendPie: {friend: Friend};
 };
 
 export interface User {

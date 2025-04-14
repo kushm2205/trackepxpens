@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import {collection, getDocs} from 'firebase/firestore';
 import {useSelector} from 'react-redux';
@@ -12,15 +13,19 @@ import {db} from '../services/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {AuthState, ActivityItem} from '../types/types';
 
+type ActivityTab = 'all' | 'personal' | 'group' | 'friend';
+
 const ActivityScreen = () => {
   const {
     userId,
     isAuthenticated,
     loading: authLoading,
   } = useSelector((state: AuthState) => state.auth);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [allActivities, setAllActivities] = useState<any[]>([]);
+  const [filteredActivities, setFilteredActivities] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [userMap, setUserMap] = useState<{[key: string]: string}>({});
+  const [activeTab, setActiveTab] = useState<ActivityTab>('all');
 
   useEffect(() => {
     if (!isAuthenticated || !userId) {
@@ -35,26 +40,34 @@ const ActivityScreen = () => {
         const userSnap = await getDocs(collection(db, 'users'));
         const userNameMap: {[key: string]: string} = {};
         userSnap.forEach(doc => {
-          userNameMap[doc.id] = doc.data().name || 'Unknown User';
+          const userData = doc.data();
+          userNameMap[userData.userId] = userData.name || 'Unknown User';
         });
         setUserMap(userNameMap);
 
-        // 2. Fetch all activity data in parallel
-        const [groups, friends, expenses, friendExpenses] = await Promise.all([
-          getDocs(collection(db, 'groups')),
-          getDocs(collection(db, 'friends')),
-          getDocs(collection(db, 'expenses')),
-          getDocs(collection(db, 'friend_expenses')),
-        ]);
+        // Fetch all activity data in parallel
+        const [groups, friends, expenses, friendExpenses, personal] =
+          await Promise.all([
+            getDocs(collection(db, 'groups')),
+            getDocs(collection(db, 'friends')),
+            getDocs(collection(db, 'expenses')),
+            getDocs(collection(db, 'friend_expenses')),
+            getDocs(collection(db, 'personal_expenses')),
+          ]);
 
-        console.log('Group_Activit', groups);
+        const isUserInvolved = (data: any, type: string) => {
+          // For personal expenses, check if userId matches current user
+          if (type === 'personal') {
+            return data.userId === userId;
+          }
 
-        const isUserInvolved = (data: any) => {
+          // For other activity types
           if (
             data.createdBy === userId ||
             data.paidBy === userId ||
             data.friend1 === userId ||
-            data.friend2 === userId
+            data.friend2 === userId ||
+            data.userId === userId
           ) {
             return true;
           }
@@ -75,6 +88,10 @@ const ActivityScreen = () => {
           const data = doc.data();
           const paidById = data.paidBy;
 
+          const createdAt = data.createdAt?.toDate
+            ? data.createdAt.toDate()
+            : new Date(data.createdAt || Date.now());
+
           const someonePaidForMe =
             paidById &&
             paidById !== userId &&
@@ -92,11 +109,18 @@ const ActivityScreen = () => {
             }
           }
 
+          // Format personal expense description
+          let description = data.description || 'No description';
+          if (type === 'personal' && data.category) {
+            description = `${description} (${data.category})`;
+          }
+
           return {
             id: doc.id,
             type,
             ...data,
-            createdAt: data.createdAt,
+            createdAt,
+            description: description,
             createdBy:
               type === 'group'
                 ? userNameMap[data.createdBy || data.admin] || 'Unknown'
@@ -107,47 +131,50 @@ const ActivityScreen = () => {
                 : undefined,
             someonePaidForMe,
             extraDesc,
+            amount: data.amount || 0,
           };
         };
-        const allActivities: any[] = [];
+
+        const activities: any[] = [];
 
         groups.forEach(doc => {
           const data = doc.data();
-          console.log('Datasss', data);
-          if (isUserInvolved(data)) {
-            allActivities.push(processActivity(doc, 'group'));
+          if (isUserInvolved(data, 'group')) {
+            activities.push(processActivity(doc, 'group'));
           }
         });
-        console.log('ALL_Activit', allActivities);
 
         friends.forEach(doc => {
           const data = doc.data();
-          if (isUserInvolved(data)) {
-            allActivities.push(processActivity(doc, 'friend'));
+          if (isUserInvolved(data, 'friend')) {
+            activities.push(processActivity(doc, 'friend'));
           }
         });
 
         expenses.forEach(doc => {
           const data = doc.data();
-          if (isUserInvolved(data)) {
-            allActivities.push(processActivity(doc, 'groupExpense'));
+          if (isUserInvolved(data, 'groupExpense')) {
+            activities.push(processActivity(doc, 'groupExpense'));
           }
         });
 
         friendExpenses.forEach(doc => {
           const data = doc.data();
-          if (isUserInvolved(data)) {
-            allActivities.push(processActivity(doc, 'friendExpense'));
+          if (isUserInvolved(data, 'friendExpense')) {
+            activities.push(processActivity(doc, 'friendExpense'));
           }
         });
-        console.log(
-          'Created+',
-          allActivities[0].timestamp,
-          '::',
-          allActivities[0].timestamp,
-        );
-        allActivities.sort((a, b) => b.timestamp - a.timestamp);
-        setActivities(allActivities);
+
+        personal.forEach(doc => {
+          const data = doc.data();
+          if (isUserInvolved(data, 'personal')) {
+            activities.push(processActivity(doc, 'personal'));
+          }
+        });
+
+        activities.sort((a, b) => b.createdAt - a.createdAt);
+        setAllActivities(activities);
+        setFilteredActivities(activities);
       } catch (error) {
         console.error('Error loading activities:', error);
       } finally {
@@ -158,26 +185,54 @@ const ActivityScreen = () => {
     fetchData();
   }, [userId, isAuthenticated]);
 
+  useEffect(() => {
+    if (activeTab === 'all') {
+      setFilteredActivities(allActivities);
+    } else {
+      const filtered = allActivities.filter(activity => {
+        if (activeTab === 'personal') {
+          return activity.type === 'personal';
+        } else if (activeTab === 'group') {
+          return activity.type.includes('group');
+        } else if (activeTab === 'friend') {
+          return activity.type.includes('friend') || activity.type === 'friend';
+        }
+        return true;
+      });
+      setFilteredActivities(filtered);
+    }
+  }, [activeTab, allActivities]);
+
   const getTypeStyle = (type: string) => {
     switch (type) {
       case 'group':
+      case 'groupExpense':
         return {icon: 'account-group', color: '#4A90E2'};
       case 'friend':
-        return {icon: 'account', color: '#7B61FF'};
-      case 'groupExpense':
-        return {icon: 'currency-inr', color: '#4CAF50'};
       case 'friendExpense':
-        return {icon: 'cash-multiple', color: '#FF9800'};
+        return {icon: 'account', color: '#7B61FF'};
+      case 'personal':
+        return {icon: 'wallet', color: '#E91E63'};
       default:
         return {icon: 'alert-circle', color: '#9E9E9E'};
     }
   };
 
+  const formatDate = (date: Date) => {
+    if (!date) return 'Unknown date';
+
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const renderItem = ({item}: any) => {
     const {icon, color} = getTypeStyle(item.type);
     const isPaidForMe = item.someonePaidForMe;
-
-    console.log('TIme__', item);
 
     return (
       <View
@@ -190,7 +245,9 @@ const ActivityScreen = () => {
           <MaterialCommunityIcons name={icon} size={24} color={color} />
           <View style={styles.typeContainer}>
             <Text style={[styles.type, {color}]}>
-              {item.type.replace(/([A-Z])/g, ' $1')}
+              {item.type === 'personal'
+                ? 'Personal Expense'
+                : item.type.replace(/([A-Z])/g, ' $1')}
             </Text>
             {isPaidForMe && (
               <Text style={styles.paidForMeText}>Paid for you</Text>
@@ -199,13 +256,21 @@ const ActivityScreen = () => {
         </View>
 
         <Text style={styles.desc}>
-          {item.groupName || item.name || item.description || 'No description'}
+          {item.type === 'personal'
+            ? item.description
+            : item.groupName ||
+              item.name ||
+              item.description ||
+              'No description'}
           {item.extraDesc ? ` ${item.extraDesc}` : ''}
         </Text>
 
-        {item.amount && (
-          <Text style={[styles.amount, {color}]}>₹{item.amount}</Text>
+        {item.amount > 0 && (
+          <Text style={[styles.amount, {color}]}>
+            ₹{item.amount.toFixed(2)}
+          </Text>
         )}
+
         <View style={styles.footer}>
           {item.paidBy && (
             <Text style={styles.creator}>Paid by: {item.paidBy}</Text>
@@ -213,15 +278,25 @@ const ActivityScreen = () => {
           {item.type === 'group' && item.createdBy && (
             <Text style={styles.creator}>Created by: {item.createdBy}</Text>
           )}
-          <Text style={styles.time}>
-            {new Date(item?.createdAt).toLocaleString()}
-          </Text>
+          {item.type === 'personal' && item.category && (
+            <Text style={styles.category}>Category: {item.category}</Text>
+          )}
+          <Text style={styles.time}>{formatDate(item.createdAt)}</Text>
         </View>
       </View>
     );
   };
 
-  // 1. First check if auth state is loading
+  const renderTabButton = (tab: ActivityTab, label: string) => (
+    <TouchableOpacity
+      style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
+      onPress={() => setActiveTab(tab)}>
+      <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
   if (authLoading) {
     return (
       <View style={styles.loader}>
@@ -230,7 +305,6 @@ const ActivityScreen = () => {
     );
   }
 
-  // 2. Then check authentication status
   if (!isAuthenticated) {
     return (
       <View style={styles.loader}>
@@ -241,7 +315,6 @@ const ActivityScreen = () => {
     );
   }
 
-  // 3. Then check if data is loading
   if (dataLoading) {
     return (
       <View style={styles.loader}>
@@ -251,22 +324,61 @@ const ActivityScreen = () => {
     );
   }
 
-  // 4. Finally render the content
-  return activities.length === 0 ? (
-    <View style={styles.loader}>
-      <Text style={styles.infoText}>No activities found</Text>
+  return (
+    <View style={styles.container}>
+      <View style={styles.tabContainer}>
+        {renderTabButton('all', 'All')}
+        {renderTabButton('personal', 'Personal')}
+        {renderTabButton('group', 'Group')}
+        {renderTabButton('friend', 'Friend')}
+      </View>
+
+      {filteredActivities.length === 0 ? (
+        <View style={styles.loader}>
+          <Text style={styles.infoText}>
+            No {activeTab === 'all' ? '' : activeTab} activities found
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredActivities}
+          keyExtractor={item => `${item.id}-${item.type}`}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
     </View>
-  ) : (
-    <FlatList
-      data={activities}
-      keyExtractor={item => `${item.id}-${item.type}`}
-      renderItem={renderItem}
-      contentContainerStyle={styles.listContainer}
-    />
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  tabButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  activeTabButton: {
+    backgroundColor: '#007bff',
+  },
+  tabText: {
+    color: '#666',
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: 'white',
+    fontWeight: '600',
+  },
   loader: {
     flex: 1,
     justifyContent: 'center',
@@ -310,6 +422,7 @@ const styles = StyleSheet.create({
   },
   typeContainer: {
     flex: 1,
+    marginLeft: 8,
   },
   type: {
     fontWeight: '600',
@@ -335,10 +448,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   creator: {
     fontSize: 12,
     color: '#666',
+    marginRight: 8,
+  },
+  category: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   time: {
     fontSize: 12,

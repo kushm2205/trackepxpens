@@ -10,6 +10,7 @@ import {
   query,
   where,
   writeBatch,
+  deleteDoc,
 } from 'firebase/firestore';
 import {db, storage, ref, uploadBytes, getDownloadURL} from './firebase';
 import {Platform} from 'react-native';
@@ -370,5 +371,61 @@ export const deleteGroupFromFirestore = async (groupId: string) => {
     throw error;
   }
 };
+export const addPersonalExpenseToFirestore = async (
+  userId: string,
+  amount: number,
+  category: string,
+  description: string,
+  date: Date,
+) => {
+  try {
+    const expenseData = {
+      userId,
+      amount,
+      category,
+      description,
+      date,
+      createdAt: serverTimestamp(),
+    };
 
+    const docRef = await addDoc(
+      collection(db, 'personal_expenses'),
+      expenseData,
+    );
+    console.log('Personal expense added with ID:', docRef.id);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error adding personal expense:', error);
+    throw error;
+  }
+};
+
+export const getPersonalExpenses = async (userId: string) => {
+  try {
+    const expensesQuery = query(
+      collection(db, 'personal_expenses'),
+      where('userId', '==', userId),
+    );
+
+    const snapshot = await getDocs(expensesQuery);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error('Error fetching personal expenses:', error);
+    throw error;
+  }
+};
+
+export const deletePersonalExpense = async (expenseId: string) => {
+  try {
+    await deleteDoc(doc(db, 'personal_expenses', expenseId));
+    console.log('Personal expense deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting personal expense:', error);
+    throw error;
+  }
+};
 export {db};
