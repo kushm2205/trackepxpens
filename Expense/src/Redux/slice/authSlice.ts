@@ -1,13 +1,12 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {AuthState} from '../../types/types';
-
+import firestore from '@react-native-firebase/firestore';
 export interface LoggedInUser {
   userId: string | null;
   email: string | null;
   photoURL: string | null;
 }
-
 export const loadAuthState = createAsyncThunk(
   'auth/loadAuthState',
   async () => {
@@ -17,7 +16,18 @@ export const loadAuthState = createAsyncThunk(
       const photoURL = await AsyncStorage.getItem('profilePicture');
 
       console.log('Loading auth state - userId:', userId);
+      if (userId) {
+        // Get subscription status from Firestore
+        const userDoc = await firestore().collection('users').doc(userId).get();
 
+        return {
+          userId,
+          email,
+          photoURL,
+
+          isAuthenticated: true,
+        };
+      }
       return {
         userId: userId ?? null,
         email: email ?? null,
@@ -106,7 +116,7 @@ const authSlice = createSlice({
       state.email = null;
       state.photoURL = null;
       state.isAuthenticated = false;
-
+      state.subscription = undefined;
       // Clear AsyncStorage auth data
       saveAuthData(null, null, null);
     },
@@ -128,6 +138,7 @@ const authSlice = createSlice({
         state.email = action.payload.email;
         state.photoURL = action.payload.photoURL;
         state.isAuthenticated = action.payload.isAuthenticated;
+
         state.loading = false;
       })
       .addCase(loadAuthState.rejected, state => {

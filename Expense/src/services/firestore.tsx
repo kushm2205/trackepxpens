@@ -106,6 +106,11 @@ export const updateUser = async (
     email: string;
     phone: string;
     profilePicture: string;
+    bankName: string;
+    accountNumber: string;
+    ifscCode: string;
+    accountType: string;
+    termsAccepted: boolean;
   }>,
 ) => {
   try {

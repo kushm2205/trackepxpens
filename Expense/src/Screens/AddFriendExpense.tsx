@@ -25,8 +25,7 @@ import {
 } from 'firebase/firestore';
 import {db} from '../services/firestore';
 import {format} from 'date-fns';
-import {FriendExpenseListRouteProp} from '../types/types'
-
+import {FriendExpenseListRouteProp} from '../types/types';
 
 const AddFriendExpense = () => {
   const route = useRoute();
@@ -122,6 +121,13 @@ const AddFriendExpense = () => {
         },
       ],
     );
+  };
+
+  const handleChartPress = () => {
+    navigation.navigate('PiChartFriend', {
+      friend,
+      expenses,
+    });
   };
 
   const renderExpenseItem = ({item}: {item: any}) => {
@@ -228,6 +234,11 @@ const AddFriendExpense = () => {
             <Text style={styles.actionButtonText}>Add Expense</Text>
           </Pressable>
         </View>
+        <Pressable
+          style={[styles.actionButton, styles.chartButton, {marginTop: 10}]}
+          onPress={handleChartPress}>
+          <Text style={styles.actionButtonText}>View Charts</Text>
+        </Pressable>
       </View>
       <FlatList
         data={expenses}
@@ -288,6 +299,9 @@ const styles = StyleSheet.create({
   },
   settleButton: {
     backgroundColor: '#34C759',
+  },
+  chartButton: {
+    backgroundColor: '#FF9500',
   },
   actionButtonText: {
     color: 'white',

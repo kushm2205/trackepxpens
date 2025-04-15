@@ -49,7 +49,7 @@ const Login: React.FC = () => {
 
   const sendOtp = async () => {
     try {
-      await axios.post('http://192.168.200.167:5000/send-otp', {email});
+      await axios.post('http://192.168.200.167:5000/api/send-otp', {email});
       Alert.alert('OTP Sent', 'Check your email for the OTP.');
       setIsOtpSent(true);
     } catch (error) {
@@ -60,7 +60,7 @@ const Login: React.FC = () => {
   const verifyOtp = async () => {
     try {
       const response = await axios.post(
-        'http://192.168.200.167:5000/verify-otp',
+        'http://192.168.200.167:5000/api/verify-otp',
         {
           email,
           otp: Number(otp),

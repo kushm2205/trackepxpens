@@ -1,4 +1,3 @@
-// Main navigation types
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
@@ -20,10 +19,13 @@ export type RootStackParamList = {
     friend: Friend;
     onUpdate: () => void;
   };
+  PaymentGateway: undefined;
+
   GroupDetails: {groupId: string};
   PieChart: {someData: string};
   EditExpense: {groupId: string; expenseId: string};
   FriendPie: {friend: Friend};
+  PiChartFriend: {friend: Friend; expenses: any[]};
 };
 
 export interface User {
@@ -150,6 +152,13 @@ export interface AuthState {
   photoURL: string | null;
   loading: boolean;
   isAuthenticated: boolean;
+  subscription?: Subscription;
+}
+interface Subscription {
+  status: string;
+  currentPeriodEnd: Date;
+  planId: string;
+  subscriptionId: string;
 }
 
 export interface ActivityItem {
