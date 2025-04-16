@@ -117,7 +117,7 @@ const authSlice = createSlice({
       state.photoURL = null;
       state.isAuthenticated = false;
       state.subscription = undefined;
-      // Clear AsyncStorage auth data
+
       saveAuthData(null, null, null);
     },
     updateProfile: (state, action) => {

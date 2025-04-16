@@ -11,12 +11,12 @@ import {
   Alert,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
-import {fetchGroups, deleteGroup} from '../Redux/slice/GroupSlice';
+import {fetchGroups, deleteGroup, removeGroup} from '../Redux/slice/GroupSlice';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {RootStackParamList} from '../types/types';
+import {RootStackParamList, group} from '../types/types';
 import {RootState, AppDispatch} from '../Redux/store';
-import {auth, db} from '../services/firebase'; // Import db
+import {auth, db} from '../services/firebase';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -34,27 +34,31 @@ import {
   getDocs,
   writeBatch,
   doc,
-} from 'firebase/firestore'; // Import necessary Firestore functions
+} from 'firebase/firestore';
+import {serverTimestamp} from '@react-native-firebase/firestore';
 
 const defaultGroupImage = require('../assets/download.jpeg');
 type GroupScreenProp = StackNavigationProp<RootStackParamList, 'GroupScreen'>;
 
 const GroupScreen = () => {
+  const [loader, setLoader] = useState(true);
+
   const dispatch = useDispatch<AppDispatch>();
   const {groups, loading, error} = useSelector(
     (state: RootState) => state.group,
   );
-  console.log('Groupssss', groups);
   const authState = useSelector((state: RootState) => state.auth);
   const navigation = useNavigation<GroupScreenProp>();
-  const [authChecked, setAuthChecked] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
 
   useEffect(() => {
     if (authState.isAuthenticated && authState.userId && !loading && !error) {
+      setLoader(true);
       dispatch(fetchGroups(authState.userId));
+      setLoader(false);
+      console.log('dispatch', serverTimestamp());
     }
-  }, [authState.isAuthenticated, authState.userId, dispatch, retryAttempt]);
+  }, [authState.isAuthenticated, dispatch, authState.userId, retryAttempt]);
 
   const handleCreateGroupPress = () => {
     navigation.navigate('CreateGroup');
@@ -62,6 +66,7 @@ const GroupScreen = () => {
 
   const handleRetry = () => {
     setRetryAttempt(prev => prev + 1);
+    console.log('retry', serverTimestamp());
   };
 
   const handleDeleteGroup = async (groupId: string) => {
@@ -90,15 +95,29 @@ const GroupScreen = () => {
 
             await batch.commit();
 
-            if (authState.userId) {
-              dispatch(fetchGroups(authState.userId));
-            }
+            dispatch(removeGroup(groupId));
           } catch (error: any) {
             Alert.alert('Error', 'Failed to delete group: ' + error.message);
           }
         },
       },
     ]);
+  };
+
+  const handleOpenChat = (groupId: string, groupName: string) => {
+    navigation.navigate('GroupChatScreen', {groupId, groupName});
+  };
+
+  const renderLeftActions = (groupId: string, groupName: string) => {
+    return (
+      <View style={styles.leftActionContainer}>
+        <RectButton
+          style={[styles.leftAction, styles.chatAction]}
+          onPress={() => handleOpenChat(groupId, groupName)}>
+          <Text style={styles.actionText}>Chat</Text>
+        </RectButton>
+      </View>
+    );
   };
 
   const renderRightActions = (groupId: string) => {
@@ -113,11 +132,13 @@ const GroupScreen = () => {
     );
   };
 
-  const renderGroupItem = ({item}: {item: any}) => (
+  const renderGroupItem = ({item}: {item: group}) => (
     <GestureHandlerRootView>
       <Swipeable
         renderRightActions={() => renderRightActions(item.id)}
-        overshootRight={false}>
+        renderLeftActions={() => renderLeftActions(item.id, item.groupName)}
+        overshootRight={false}
+        overshootLeft={false}>
         <TouchableOpacity
           style={styles.groupItem}
           onPress={() => {
@@ -166,12 +187,13 @@ const GroupScreen = () => {
     <GestureHandlerRootView style={{flex: 1}}>
       <View style={styles.container}>
         <Text style={styles.header}>Groups</Text>
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0000ff" />
-            <Text style={styles.statusText}>Loading groups...</Text>
-          </View>
-        )}
+        {loader ||
+          (loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0000ff" />
+              <Text style={styles.statusText}>Loading groups...</Text>
+            </View>
+          ))}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -276,13 +298,25 @@ const styles = StyleSheet.create({
     width: 80,
     flexDirection: 'row',
   },
+  leftActionContainer: {
+    width: 80,
+    flexDirection: 'row',
+  },
   rightAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 80,
+  },
+  leftAction: {
     alignItems: 'center',
     justifyContent: 'center',
     width: 80,
   },
   deleteAction: {
     backgroundColor: 'red',
+  },
+  chatAction: {
+    backgroundColor: '#007AFF',
   },
   actionText: {
     color: 'white',

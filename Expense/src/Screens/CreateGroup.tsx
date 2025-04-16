@@ -148,7 +148,7 @@ const CreateGroup = () => {
       Alert.alert('Success', 'Group created successfully!', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('Home'),
+          onPress: () => navigation.goBack(),
         },
       ]);
     } catch (error) {

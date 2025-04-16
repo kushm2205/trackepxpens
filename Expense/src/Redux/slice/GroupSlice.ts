@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   where,
   query,
+  Timestamp,
 } from 'firebase/firestore';
 import {RootState} from '../store';
 import {
@@ -34,16 +35,23 @@ import {calculateShares} from '../../utils/Expenssutils';
 export const fetchGroups = createAsyncThunk<
   group[],
   string | void,
-  {rejectValue: string}
->('group/fetchGroups', async (userId, {rejectWithValue}) => {
+  {rejectValue: string; state: RootState}
+>('group/fetchGroups', async (userId, {rejectWithValue, getState}) => {
   try {
-    console.log('Starting fetchGroups...');
+    const state = getState();
+    const currentTime = new Date().getTime();
+
+    if (
+      state.group.lastFetched &&
+      currentTime - state.group.lastFetched < 300000
+    ) {
+      return state.group.groups;
+    }
+
     const currentUser = auth.currentUser;
     const userIdToUse = userId || currentUser?.uid;
 
-    console.log('Using userId for query:', userIdToUse);
     if (!userIdToUse) {
-      console.log('No user ID available to query groups');
       return rejectWithValue('User not authenticated');
     }
 
@@ -52,36 +60,25 @@ export const fetchGroups = createAsyncThunk<
       where('members', 'array-contains', userIdToUse),
     );
 
-    console.log('Executing Firestore query...');
     const groupsSnapshot = await getDocs(groupsQuery);
-    console.log(`Query returned ${groupsSnapshot.docs.length} documents`);
+    console.log('grou', Timestamp.now());
 
     const groupsList = await Promise.all(
       groupsSnapshot.docs.map(async doc => {
         const groupData = doc.data();
-        const membersCount = groupData.members ? groupData.members.length : 0;
-        console.log(
-          `Processing group: ${doc.id}, name: ${groupData.groupName}`,
-        );
-
         return {
           id: doc.id,
           ...groupData,
-          membersCount,
+          membersCount: groupData.members ? groupData.members.length : 0,
           groupImageUrl: groupData.groupImage || null,
         } as group;
       }),
     );
-
-    console.log(`Returning ${groupsList.length} groups`);
+    console.log(groupsList, '', Timestamp.now());
     return groupsList;
   } catch (error) {
     console.error('Error fetching groups:', error);
-    return rejectWithValue(
-      `Failed to fetch groups: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`,
-    );
+    return rejectWithValue('Failed to fetch groups');
   }
 });
 export const fetchUsers = createAsyncThunk<
@@ -314,6 +311,7 @@ const initialState: GroupState = {
   selectedGroup: null,
   memberNames: {},
   balances: {},
+  lastFetched: null,
 };
 interface ExpensePayload {
   groupId: string;
@@ -368,7 +366,13 @@ const groupSlice = createSlice({
         console.error('Balance calculation failed:', error);
       }
     },
+    removeGroup: (state, action: PayloadAction<string>) => {
+      state.groups = state.groups.filter(
+        (group: {id: string}) => group.id !== action.payload,
+      );
+    },
   },
+
   extraReducers: builder => {
     builder.addCase(fetchGroups.pending, state => {
       state.loading = true;
@@ -376,7 +380,7 @@ const groupSlice = createSlice({
     });
     builder.addCase(fetchGroups.fulfilled, (state, action) => {
       state.loading = false;
-      state.groups = action.payload || [];
+      state.groups = action.payload;
     });
     builder.addCase(fetchGroups.rejected, (state, action) => {
       state.loading = false;
@@ -473,6 +477,7 @@ export const {
   clearSearchResults,
   setSearchQuery,
   addExpenseTransaction,
+  removeGroup,
 } = groupSlice.actions;
 
 export default groupSlice.reducer;

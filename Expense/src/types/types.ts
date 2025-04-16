@@ -20,6 +20,7 @@ export type RootStackParamList = {
     onUpdate: () => void;
   };
   PaymentGateway: undefined;
+  GroupChatScreen: {groupId: string; groupName: string};
 
   GroupDetails: {groupId: string};
   PieChart: {someData: string};

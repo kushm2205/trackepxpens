@@ -15,6 +15,8 @@ import {RootState} from '../Redux/store';
 import {fetchGroupDetails, fetchUserDetails} from '../Redux/slice/GroupSlice';
 import {RouteProp, useRoute, useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
+import {useFocusEffect} from '@react-navigation/native';
+import {useIsFocused} from '@react-navigation/native';
 import {
   collection,
   query,
@@ -56,10 +58,14 @@ const GroupDetailsScreen: React.FC = () => {
   const [memberBalances, setMemberBalances] = useState<MemberBalance[]>([]);
   const [userTransactions, setUserTransactions] = useState<Settlement[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
-
+  const isFocused = useIsFocused();
   useEffect(() => {
-    dispatch(fetchGroupDetails(groupId));
-  }, [dispatch, groupId]);
+    if (isFocused && groupId) {
+      if (!selectedGroup || selectedGroup.id !== groupId) {
+        dispatch(fetchGroupDetails(groupId));
+      }
+    }
+  }, [isFocused, groupId, selectedGroup?.id, dispatch]);
 
   useEffect(() => {
     if (!groupId) return;
@@ -70,27 +76,22 @@ const GroupDetailsScreen: React.FC = () => {
     );
 
     const unsubscribe = onSnapshot(expensesQuery, querySnapshot => {
-      const expensesData: Expense[] = [];
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        expensesData.push({
-          id: doc.id,
-          description: data.description,
-          amount: data.amount,
-          paidBy: data.paidBy,
-          splitBetween: data.splitBetween,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          groupId: null,
-          isFriendExpense: false,
-        });
-      });
+      const newExpenses = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      }));
 
-      expensesData.sort((a, b) => b.createdAt - a.createdAt);
-      setExpenses(expensesData);
+      setExpenses(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(newExpenses)) {
+          return newExpenses;
+        }
+        return prev;
+      });
       setExpensesLoading(false);
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, [groupId]);
 
   useEffect(() => {
