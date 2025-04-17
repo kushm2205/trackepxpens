@@ -19,6 +19,7 @@ export type RootStackParamList = {
     friend: Friend;
     onUpdate: () => void;
   };
+  ChatScreenFriend: {friend: Friend};
   PaymentGateway: undefined;
   GroupChatScreen: {groupId: string; groupName: string};
 
@@ -42,7 +43,6 @@ export interface Friend {
   name: string;
   photo?: string;
 }
-
 // Contact types
 export interface PhoneNumber {
   number: string;

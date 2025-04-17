@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
 import {AppDispatch, RootState} from '../Redux/store';
 import {
@@ -24,16 +24,10 @@ import {
   collection,
   onSnapshot,
   doc,
-  deleteDoc,
-  updateDoc,
-  where,
-  CollectionReference,
-  DocumentData,
-  QueryFieldFilterConstraint,
-  DocumentReference,
   writeBatch,
   getDocs,
   query,
+  where,
 } from 'firebase/firestore';
 import {db} from '../services/firebase';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -49,7 +43,8 @@ const FriendsScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
   const friends = useSelector(selectFriends);
   const loading = useSelector(selectFriendsLoading);
-
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [friend, setFriend] = useState<number>(0);
   const {userId} = useSelector((state: RootState) => state.auth);
   const [friendBalances, setFriendBalances] = useState<Record<string, number>>(
     {},
@@ -59,22 +54,28 @@ const FriendsScreen = () => {
     navigation.navigate('AddFriendExpense', {friend});
   };
 
+  const handleNavigateToChat = (friend: Friend) => {
+    navigation.navigate('ChatScreenFriend', {friend});
+  };
+
   const FriendRequest = () => {
     navigation.navigate('FriendRequest');
   };
 
-  useEffect(() => {
-    if (userId) {
-      dispatch(fetchFriends(userId));
-    }
-  }, [dispatch, userId]);
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) {
+        dispatch(fetchFriends(userId));
+      }
+    }, [dispatch, userId]),
+  );
 
   useEffect(() => {
     if (!userId || friends.length === 0) return;
 
     const calculateBalances = (friendExpenses: any[], groupExpenses: any[]) => {
       const balances: Record<string, number> = {};
-
+      let total = 0;
       for (const friend of friends) {
         const friendId = friend.userId ?? friend.phone;
         if (!friendId || friendId === userId) continue;
@@ -120,9 +121,11 @@ const FriendsScreen = () => {
         });
 
         balances[friendId] = totalBalance;
+        total += totalBalance;
       }
 
       setFriendBalances(balances);
+      setTotalBalance(total);
     };
 
     const unsubscribeFriendExpenses = onSnapshot(
@@ -208,6 +211,17 @@ const FriendsScreen = () => {
       ],
     );
   };
+
+  const renderLeftActions = (friend: Friend) => {
+    return (
+      <RectButton
+        style={styles.chatButton}
+        onPress={() => handleNavigateToChat(friend)}>
+        <Text style={styles.chatButtonText}>Chat</Text>
+      </RectButton>
+    );
+  };
+
   const renderRightActions = (friend: Friend) => {
     return (
       <RectButton
@@ -224,7 +238,9 @@ const FriendsScreen = () => {
     const displayName = friendId === userId ? 'You' : item.name;
 
     return (
-      <Swipeable renderRightActions={() => renderRightActions(item)}>
+      <Swipeable
+        renderLeftActions={() => renderLeftActions(item)}
+        renderRightActions={() => renderRightActions(item)}>
         <Pressable onPress={() => handleAddExpense(item)}>
           <View style={styles.friendItem}>
             <Image
@@ -260,6 +276,23 @@ const FriendsScreen = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.totalBalanceContainer}>
+        <Text style={styles.totalBalanceText}>Total Balance</Text>
+        <Text
+          style={[
+            styles.totalBalanceAmount,
+            {
+              color:
+                totalBalance < 0 ? 'red' : totalBalance > 0 ? 'green' : 'gray',
+            },
+          ]}>
+          {totalBalance === 0
+            ? 'Settled up'
+            : totalBalance > 0
+            ? `You are owed ₹${totalBalance.toFixed(2)}`
+            : `You owe ₹${Math.abs(totalBalance).toFixed(2)}`}
+        </Text>
+      </View>
       {loading ? (
         <ActivityIndicator
           size="large"
@@ -292,6 +325,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  totalBalanceContainer: {
+    padding: 20,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    alignItems: 'center',
+  },
+  totalBalanceText: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 5,
+  },
+  totalBalanceAmount: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   addButton: {
     backgroundColor: '#007bff',
@@ -352,6 +401,17 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   deleteButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  chatButton: {
+    backgroundColor: '#007bff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
+  },
+  chatButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },

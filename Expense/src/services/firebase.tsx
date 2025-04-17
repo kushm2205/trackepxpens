@@ -8,6 +8,7 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithCredential,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -62,6 +63,7 @@ export {
   GoogleAuthProvider,
   signInWithCredential,
   googleProvider,
+  sendPasswordResetEmail,
   setDoc,
   doc,
 };

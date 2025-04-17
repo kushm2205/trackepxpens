@@ -25,6 +25,7 @@ import PersonalExpensesScreen from './src/Screens/Personalexpenss';
 import PieChartScreen from './src/Screens/Piechart';
 import PiChartFriend from './src/Screens/PieChartFriend';
 import ChatScreen from './src/Screens/chatscreengroup';
+import ChatScreenFriend from './src/Screens/FriendChatScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -49,6 +50,11 @@ const AppStack = () => (
 
     <Stack.Screen name="GroupChatScreen" component={ChatScreen} />
     <Stack.Screen name="EditFriendExpenss" component={EditFriendExpenss} />
+    <Stack.Screen
+      name="ChatScreenFriend"
+      component={ChatScreenFriend}
+      options={{title: 'Chat'}}
+    />
     <Stack.Screen
       name="FriendExpenseDetails"
       component={FriendExpenseDetails}

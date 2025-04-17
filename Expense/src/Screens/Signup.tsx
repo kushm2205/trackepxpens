@@ -7,6 +7,9 @@ import {
   Alert,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+  Pressable,
 } from 'react-native';
 import axios from 'axios';
 import {auth, createUserWithEmailAndPassword} from '../services/firebase';
@@ -27,23 +30,108 @@ const Signup: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [phone, setPhone] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [country, setCountry] = useState('');
+  const [errors, setErrors] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: '',
+    otp: '',
+    country: '',
+  });
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      phone: '',
+      otp: '',
+      country: '',
+    };
+
+    if (!name.trim()) {
+      newErrors.name = 'Name is required';
+      isValid = false;
+    }
+
+    if (!email) {
+      newErrors.email = 'Email is required';
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Email is invalid';
+      isValid = false;
+    }
+    if (country.length <= 0) {
+      newErrors.country = 'Country code is required';
+      isValid = false;
+    }
+
+    if (
+      !password ||
+      password.length < 6 ||
+      !/[A-Z]/.test(password) ||
+      !/[0-9]/.test(password) ||
+      !/[$&@#*%]/.test(password)
+    ) {
+      newErrors.password =
+        'Passwords are required to contain an uppercase letter, a number, and a special character.';
+      isValid = false;
+    }
+
+    if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+
+    if (!phone) {
+      newErrors.phone = 'Phone number is required';
+      isValid = false;
+    } else if (!/^\d{10}$/.test(phone)) {
+      newErrors.phone = 'Phone number must be 10 digits';
+      isValid = false;
+    }
+
+    if (isOtpSent && !otp) {
+      newErrors.otp = 'OTP is required';
+      isValid = false;
+    } else if (isOtpSent && otp.length !== 6) {
+      newErrors.otp = 'OTP must be 6 digits';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
 
   const sendOtp = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
     try {
       await axios.post('http://192.168.200.167:5000/api/send-otp', {email});
       Alert.alert('OTP Sent', 'Check your email for the OTP');
-      console.log('executed');
+
       setIsOtpSent(true);
     } catch (error) {
       Alert.alert('Error', 'Failed to send OTP');
-      console.log(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const verifyOtp = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
     try {
       const response = await axios.post(
         'http://192.168.200.167:5000/api/verify-otp',
@@ -54,88 +142,265 @@ const Signup: React.FC = () => {
       );
 
       if (response.status === 200) {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password,
-        );
-        const user = userCredential.user;
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password,
+          );
+          const user = userCredential.user;
 
-        await createUser(user.uid, name, email, phone, '');
+          await createUser(user.uid, name, email, phone, '', country);
 
-        await AsyncStorage.setItem('userId', user.uid);
-        await AsyncStorage.setItem('email', email);
+          await AsyncStorage.setItem('userId', user.uid);
+          await AsyncStorage.setItem('email', email);
 
-        dispatch(login({userId: user.uid, email}));
+          dispatch(login({userId: user.uid, email}));
 
-        Alert.alert('Success', 'Account created successfully');
-        navigation.navigate('Home');
+          Alert.alert('Success', 'Account created successfully');
+          navigation.navigate('Home');
+        } catch (firebaseError: any) {
+          let errorMessage = 'Failed to create account';
+          if (firebaseError.code === 'auth/email-already-in-use') {
+            errorMessage = 'This email is already in use';
+          }
+          Alert.alert('Error', errorMessage);
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Invalid OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearError = (field: keyof typeof errors) => {
+    if (errors[field]) {
+      setErrors({...errors, [field]: ''});
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Name</Text>
-      <TextInput value={name} onChangeText={setName} style={styles.input} />
+    <ScrollView style={styles.scrollContainer}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Create Account</Text>
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        style={styles.input}
-      />
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          value={name}
+          onChangeText={text => {
+            setName(text);
+            clearError('name');
+          }}
+          style={[styles.input, errors.name ? styles.inputError : null]}
+          placeholder="Enter a Name"
+        />
+        {errors.name ? (
+          <Text style={styles.errorText}>{errors.name}</Text>
+        ) : null}
 
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
-      <Text style={styles.label}>Number</Text>
-      <TextInput
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="numeric"
-        style={styles.input}
-      />
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          value={email}
+          onChangeText={text => {
+            setEmail(text);
+            clearError('email');
+          }}
+          keyboardType="email-address"
+          style={[styles.input, errors.email ? styles.inputError : null]}
+          placeholder="Entre A Email Address"
+          autoCapitalize="none"
+        />
+        {errors.email ? (
+          <Text style={styles.errorText}>{errors.email}</Text>
+        ) : null}
 
-      {!isOtpSent ? (
-        <Button title="Get Verification Code" onPress={sendOtp} />
-      ) : (
-        <>
-          <Text style={styles.label}>Enter OTP</Text>
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          value={password}
+          onChangeText={text => {
+            setPassword(text);
+            clearError('password');
+          }}
+          secureTextEntry
+          style={[styles.input, errors.password ? styles.inputError : null]}
+          placeholder="Entre a Password"
+        />
+        {errors.password ? (
+          <Text style={styles.errorText}>{errors.password}</Text>
+        ) : null}
+
+        <Text style={styles.label}>Confirm Password</Text>
+        <TextInput
+          value={confirmPassword}
+          onChangeText={text => {
+            setConfirmPassword(text);
+            clearError('confirmPassword');
+          }}
+          secureTextEntry
+          style={[
+            styles.input,
+            errors.confirmPassword ? styles.inputError : null,
+          ]}
+          placeholder="Entre A Confirm Password"
+        />
+        {errors.confirmPassword ? (
+          <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+        ) : null}
+
+        <Text style={styles.label}>Phone Number</Text>
+        <View style={styles.phoneView}>
           <TextInput
-            value={otp}
-            onChangeText={setOtp}
+            value={country}
+            onChangeText={text => {
+              setCountry(text);
+            }}
             keyboardType="numeric"
-            style={styles.input}
+            style={styles.phonetext}
+            placeholder="+91"
           />
-          <Button title="Verify OTP" onPress={verifyOtp} />
-        </>
-      )}
+          <TextInput
+            value={phone}
+            onChangeText={text => {
+              setPhone(text);
+              clearError('phone');
+            }}
+            keyboardType="numeric"
+            style={[styles.input, errors.phone ? styles.inputError : null]}
+            placeholder="enter a mobile number"
+            maxLength={10}
+          />
+        </View>
+        {errors.phone ? (
+          <Text style={styles.errorText}>{errors.phone}</Text>
+        ) : null}
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Already have an account? Login</Text>
-      </TouchableOpacity>
-    </View>
+        {!isOtpSent ? (
+          <TouchableOpacity
+            style={styles.button}
+            onPress={sendOtp}
+            disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Get Verification Code</Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <View>
+            <Text style={styles.label}>Enter OTP</Text>
+            <TextInput
+              value={otp}
+              onChangeText={text => {
+                setOtp(text);
+                clearError('otp');
+              }}
+              keyboardType="numeric"
+              style={[styles.input, errors.otp ? styles.inputError : null]}
+              placeholder="123456"
+              maxLength={6}
+            />
+            {errors.otp ? (
+              <Text style={styles.errorText}>{errors.otp}</Text>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.button}
+              onPress={verifyOtp}
+              disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>
+                  Verify OTP & Create Account
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={styles.linkContainer}
+          onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.link}>Already have an account? Login</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {padding: 20},
-  label: {fontSize: 16, fontWeight: 'bold', marginBottom: 5},
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  container: {
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#333',
+  },
   input: {
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
     marginBottom: 10,
     fontSize: 16,
-    paddingVertical: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#f9f9f9',
+    width: '90%',
   },
-  link: {color: 'blue', marginTop: 10, textAlign: 'center'},
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 10,
+  },
+  button: {
+    backgroundColor: '#4285F4',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  linkContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  phoneView: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 10,
+  },
+  phonetext: {
+    fontSize: 16,
+    color: '#333',
+    width: '10%',
+  },
+  link: {
+    color: '#4285F4',
+    fontSize: 16,
+  },
 });
 
 export default Signup;

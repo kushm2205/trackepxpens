@@ -22,6 +22,7 @@ export const createUser = async (
   email: string,
   phone: string,
   profilePicture: string,
+  countrycode: string,
 ) => {
   try {
     const userRef = doc(db, 'users', userId);
@@ -34,6 +35,7 @@ export const createUser = async (
         phone,
         profilePicture,
         createdAt: serverTimestamp(),
+        countrycode,
       },
       {merge: true},
     );
