@@ -72,7 +72,7 @@ const ChatScreenFriend = () => {
 
   useEffect(() => {
     const q = query(
-      collection(db, 'chats', chatId, 'messages'),
+      collection(db, 'friends', chatId, 'messages'),
       orderBy('timestamp', 'asc'),
     );
     const unsubscribe = onSnapshot(q, snapshot => {
@@ -90,7 +90,7 @@ const ChatScreenFriend = () => {
     if (message.trim() === '') return;
 
     try {
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+      await addDoc(collection(db, 'friends', chatId, 'messages'), {
         text: message,
         senderId: authState.userId,
         receiverId: friend.userId,

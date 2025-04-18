@@ -28,7 +28,6 @@ import {useSelector} from 'react-redux';
 const FriendRequestScreen = ({navigation}: any) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [contactResults, setContactResults] = useState<any[]>([]);
-  // const userId = auth().currentUser?.uid;
   const {userId} = useSelector((state: RootState) => state.auth);
   const [existingFriends, setExistingFriends] = useState<string[]>([]);
 
@@ -39,6 +38,7 @@ const FriendRequestScreen = ({navigation}: any) => {
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
+    // iOS: Permission handled by system on first use
     return true;
   };
 
@@ -48,7 +48,13 @@ const FriendRequestScreen = ({navigation}: any) => {
 
   const fetchContacts = async () => {
     const permission = await requestContactPermission();
-    if (!permission) return;
+    if (!permission) {
+      Alert.alert(
+        'Permission Denied',
+        'Please enable Contacts permission in settings to use this feature.',
+      );
+      return;
+    }
 
     Contacts.getAll()
       .then(async contacts => {
@@ -61,7 +67,10 @@ const FriendRequestScreen = ({navigation}: any) => {
         const matchedUsers = await getMatchingUsers(filtered);
         setContactResults(matchedUsers);
       })
-      .catch(err => console.warn('Error fetching contacts:', err));
+      .catch(err => {
+        console.warn('Error fetching contacts:', err);
+        Alert.alert('Error', 'Could not fetch contacts.');
+      });
   };
 
   const getMatchingUsers = async (contacts: any[]) => {
@@ -103,17 +112,9 @@ const FriendRequestScreen = ({navigation}: any) => {
   };
 
   const addFriend = async (friend: any) => {
-    console.log('Pressed');
-    console.log('Pressed', userId);
-    // if (!userId) {
-    //   console.log('User ID is null');
-    //   return;
-    // }
-
     const friendId = friend.userId || friend.phone;
 
     if (existingFriends.includes(friendId)) {
-      console.log('Friend already exists');
       Alert.alert(
         'Already Friend',
         'This user is already in your friend list.',
@@ -122,12 +123,10 @@ const FriendRequestScreen = ({navigation}: any) => {
     }
 
     try {
-      console.log('Attempting to add friend:', friend);
       const friendDocRef = doc(db, 'friends', `${userId}_${friendId}`);
       const friendDoc = await getDoc(friendDocRef);
 
       if (friendDoc.exists()) {
-        console.log('Friend document already exists');
         Alert.alert('Already Friend', 'Friend already added.');
         return;
       }
@@ -141,7 +140,6 @@ const FriendRequestScreen = ({navigation}: any) => {
         createdAt: new Date().toISOString(),
       });
 
-      console.log('Friend added successfully');
       Alert.alert('Success', 'Friend added successfully!');
       setExistingFriends(prev => [...prev, friendId]);
     } catch (error) {

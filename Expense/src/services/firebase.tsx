@@ -21,7 +21,7 @@ import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 const firebaseConfig = {
   apiKey:
     Platform.OS === 'ios'
-      ? 'AIzaSyCIY560R83mJGCu8ili9Z523ijjLXHKjW0'
+      ? 'AIzaSyDVOW3tdI9aeUTsTwWeHKW_YpwQv0C7OLw'
       : 'AIzaSyC_1zSM9CCHHGBjND7elDlW1GDM9BUsvnQ',
   authDomain: 'expenss-fc1b4.firebaseapp.com',
   projectId: 'expenss-fc1b4',
@@ -29,7 +29,7 @@ const firebaseConfig = {
   messagingSenderId: '341927006678',
   appId:
     Platform.OS === 'ios'
-      ? '1:341927006678:ios:6932be5b8b1bed2dffd477'
+      ? '1:270497481638:ios:de810f698609c54ea50567'
       : '1:270497481638:android:f5de1b3f6509f4f0a50567',
   databaseURL: 'https://expenss-fc1b4.firebaseio.com',
 };

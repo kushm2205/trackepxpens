@@ -1,3 +1,5 @@
+// Update to your GroupSlice.ts file
+
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
 import {auth, db} from '../../services/firebase';
 import {
@@ -31,6 +33,13 @@ import {
 import {linkWithRedirect} from 'firebase/auth';
 import {ThemeContext, ThemeProvider} from '@react-navigation/native';
 import {calculateShares} from '../../utils/Expenssutils';
+import {NavigationProp} from '@react-navigation/native';
+import {RootStackParamList} from '../../types/types';
+
+// Update the CreateGroupPayload interface to include optional navigation
+interface ExtendedCreateGroupPayload extends CreateGroupPayload {
+  navigation?: NavigationProp<RootStackParamList>;
+}
 
 export const fetchGroups = createAsyncThunk<
   group[],
@@ -61,7 +70,7 @@ export const fetchGroups = createAsyncThunk<
     );
 
     const groupsSnapshot = await getDocs(groupsQuery);
-    console.log('grou', Timestamp.now());
+    console.log('group', Timestamp.now());
 
     const groupsList = await Promise.all(
       groupsSnapshot.docs.map(async doc => {
@@ -81,6 +90,7 @@ export const fetchGroups = createAsyncThunk<
     return rejectWithValue('Failed to fetch groups');
   }
 });
+
 export const fetchUsers = createAsyncThunk<
   FirebaseUser[],
   void,
@@ -108,13 +118,13 @@ export const fetchUsers = createAsyncThunk<
 
 export const createNewGroup = createAsyncThunk<
   group,
-  CreateGroupPayload,
+  ExtendedCreateGroupPayload,
   {rejectValue: string; state: RootState}
 >(
   'group/createNewGroup',
   async (
-    {groupName, adminUserId, members, groupImage},
-    {rejectWithValue, getState},
+    {groupName, adminUserId, members, groupImage, navigation},
+    {rejectWithValue, getState, dispatch},
   ) => {
     try {
       if (!adminUserId) {
@@ -131,7 +141,7 @@ export const createNewGroup = createAsyncThunk<
         timestamp: serverTimestamp(),
         groupImage: groupImage || null,
       };
-      console.log('GroupDat', groupData);
+      console.log('GroupData', groupData);
 
       const docRef = await addDoc(collection(db, 'groups'), groupData);
 
@@ -142,15 +152,27 @@ export const createNewGroup = createAsyncThunk<
         systemMessage: true,
       });
 
-      return {
+      const newGroup = {
         id: docRef.id,
         ...groupData,
         membersCount: uniqueMembers.length,
         groupImageUrl: groupImage,
       } as group;
+
+      // After creating the group, force a refresh of groups
+      if (adminUserId) {
+        dispatch(fetchGroups(adminUserId));
+      }
+
+      // Navigate back if navigation is provided
+      if (navigation) {
+        navigation.navigate('GroupScreen');
+      }
+
+      return newGroup;
     } catch (error) {
       console.error('Error creating group:', error);
-      return rejectWithValue('Failed to create group: ' + error);
+      return rejectWithValue(`Failed to create group: ${error}`);
     }
   },
 );
@@ -288,17 +310,36 @@ export const addExpense = createAsyncThunk<
     }
   },
 );
-export const deleteGroup = createAsyncThunk(
-  'groups/deleteGroup',
-  async (groupId: string, {rejectWithValue}) => {
-    try {
-      await deleteGroupFromFirestore(groupId);
-      return groupId;
-    } catch (error: any) {
-      return rejectWithValue(error.message);
-    }
-  },
-);
+
+export const deleteGroup = createAsyncThunk<
+  string,
+  string,
+  {rejectValue: string}
+>('groups/deleteGroup', async (groupId: string, {rejectWithValue}) => {
+  try {
+    await deleteGroupFromFirestore(groupId);
+    return groupId;
+  } catch (error: any) {
+    return rejectWithValue(error.message);
+  }
+});
+
+// Add proper type definition for GroupState
+interface GroupState {
+  groups: group[];
+  selectedMembers: string[];
+  searchResults: Contact[];
+  deviceContacts: DeviceContact[];
+  users: FirebaseUser[];
+  loading: boolean;
+  error: string | null;
+  selectedGroup: group | null;
+  memberNames: {[key: string]: string};
+  balances: {
+    [groupId: string]: {[userId: string]: {[otherUserId: string]: number}};
+  };
+  lastFetched: number | null;
+}
 
 const initialState: GroupState = {
   groups: [],
@@ -313,6 +354,7 @@ const initialState: GroupState = {
   balances: {},
   lastFetched: null,
 };
+
 interface ExpensePayload {
   groupId: string;
   paidBy: string;
@@ -367,9 +409,7 @@ const groupSlice = createSlice({
       }
     },
     removeGroup: (state, action: PayloadAction<string>) => {
-      state.groups = state.groups.filter(
-        (group: {id: string}) => group.id !== action.payload,
-      );
+      state.groups = state.groups.filter(group => group.id !== action.payload);
     },
   },
 
@@ -381,6 +421,7 @@ const groupSlice = createSlice({
     builder.addCase(fetchGroups.fulfilled, (state, action) => {
       state.loading = false;
       state.groups = action.payload;
+      state.lastFetched = new Date().getTime();
     });
     builder.addCase(fetchGroups.rejected, (state, action) => {
       state.loading = false;
@@ -461,9 +502,7 @@ const groupSlice = createSlice({
       state.error = action.payload as string;
     });
     builder.addCase(deleteGroup.fulfilled, (state, action) => {
-      state.groups = state.groups.filter(
-        (group: {id: string}) => group.id !== action.payload,
-      );
+      state.groups = state.groups.filter(group => group.id !== action.payload);
     });
     builder.addCase(deleteGroup.rejected, (state, action) => {
       state.error = action.payload as string;

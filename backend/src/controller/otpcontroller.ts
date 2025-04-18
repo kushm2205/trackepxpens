@@ -5,6 +5,9 @@ import transporter from "../config/mailer";
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
 
+  console.log("====================================");
+  console.log(email);
+  console.log("====================================");
   if (!email) {
     res.status(400).json({ message: "Email is required" });
     return;
@@ -13,16 +16,19 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   try {
-    await Otp.findOneAndUpdate(
+    const new1 = await Otp.findOneAndUpdate(
       { email },
       { otp, createdAt: new Date() },
       { upsert: true, new: true }
     );
 
+    console.log("====================================");
+    console.log(new1);
+    console.log("====================================");
     console.log(`Generated OTP for ${email}: ${otp}`);
 
     const mailOptions = {
-      from: process.env.EMAIL_USER || "kushp2224@gmail.com",
+      from: "kushp2224@gmail.com",
       to: email,
       subject: "Your Verification Code",
       text: `Your OTP code is: ${otp}`,

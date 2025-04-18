@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,11 @@ import {
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchGroups, deleteGroup, removeGroup} from '../Redux/slice/GroupSlice';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList, group} from '../types/types';
 import {RootState, AppDispatch} from '../Redux/store';
 import {auth, db} from '../services/firebase';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import {
   GestureHandlerRootView,
   Swipeable,
@@ -35,7 +30,6 @@ import {
   writeBatch,
   doc,
 } from 'firebase/firestore';
-import {serverTimestamp} from '@react-native-firebase/firestore';
 
 const defaultGroupImage = require('../assets/download.jpeg');
 type GroupScreenProp = StackNavigationProp<RootStackParamList, 'GroupScreen'>;
@@ -51,14 +45,51 @@ const GroupScreen = () => {
   const navigation = useNavigation<GroupScreenProp>();
   const [retryAttempt, setRetryAttempt] = useState(0);
 
-  useEffect(() => {
-    if (authState.isAuthenticated && authState.userId && !loading && !error) {
+  // Function to fetch groups
+  const loadGroups = useCallback(() => {
+    if (authState.isAuthenticated && authState.userId) {
       setLoader(true);
-      dispatch(fetchGroups(authState.userId));
-      setLoader(false);
-      console.log('dispatch', serverTimestamp());
+      dispatch(fetchGroups(authState.userId))
+        .unwrap()
+        .then(() => setLoader(false))
+        .catch(() => setLoader(false));
     }
-  }, [authState.isAuthenticated, dispatch, authState.userId, retryAttempt]);
+  }, [authState.isAuthenticated, authState.userId, dispatch]);
+
+  // Load groups on initial mount
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups, retryAttempt]);
+
+  // Refresh groups when screen comes into focus - with force refresh
+  useFocusEffect(
+    useCallback(() => {
+      // Force a refresh every time the screen comes into focus
+      if (authState.isAuthenticated && authState.userId) {
+        setLoader(true);
+        dispatch(fetchGroups(authState.userId))
+          .unwrap()
+          .then(() => setLoader(false))
+          .catch(() => setLoader(false));
+      }
+    }, [authState.isAuthenticated, authState.userId, dispatch]),
+  );
+
+  // Add explicit listener for navigation focus events
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Force refresh when screen is focused
+      if (authState.isAuthenticated && authState.userId) {
+        setLoader(true);
+        dispatch(fetchGroups(authState.userId))
+          .unwrap()
+          .then(() => setLoader(false))
+          .catch(() => setLoader(false));
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, authState.isAuthenticated, authState.userId, dispatch]);
 
   const handleCreateGroupPress = () => {
     navigation.navigate('CreateGroup');
@@ -66,7 +97,6 @@ const GroupScreen = () => {
 
   const handleRetry = () => {
     setRetryAttempt(prev => prev + 1);
-    console.log('retry', serverTimestamp());
   };
 
   const handleDeleteGroup = async (groupId: string) => {
@@ -187,20 +217,19 @@ const GroupScreen = () => {
     <GestureHandlerRootView style={{flex: 1}}>
       <View style={styles.container}>
         <Text style={styles.header}>Groups</Text>
-        {loader ||
-          (loading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#0000ff" />
-              <Text style={styles.statusText}>Loading groups...</Text>
-            </View>
-          ))}
+        {loader || loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+            <Text style={styles.statusText}>Loading groups...</Text>
+          </View>
+        ) : null}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
             <Button title="Retry" onPress={handleRetry} />
           </View>
         )}
-        {!loading && (!groups || groups.length === 0) && !error && (
+        {!loading && !loader && (!groups || groups.length === 0) && !error && (
           <View style={styles.emptyContainer}>
             <Text style={styles.statusText}>
               No groups found. Create your first group!
@@ -208,7 +237,7 @@ const GroupScreen = () => {
             <Button title="Create New Group" onPress={handleCreateGroupPress} />
           </View>
         )}
-        {!loading && groups && groups.length > 0 && (
+        {!loading && !loader && groups && groups.length > 0 && (
           <FlatList
             data={groups}
             renderItem={renderGroupItem}

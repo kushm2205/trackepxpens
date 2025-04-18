@@ -1,5 +1,5 @@
 import React, {useEffect} from 'react';
-import {View, ActivityIndicator, StyleSheet} from 'react-native';
+import {View, ActivityIndicator, StyleSheet, SafeAreaView} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {useSelector, useDispatch, Provider} from 'react-redux';
@@ -98,9 +98,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Provider store={store}>
-      <AppContent />
-    </Provider>
+    <SafeAreaView style={styles.container}>
+      <Provider store={store}>
+        <AppContent />
+      </Provider>
+    </SafeAreaView>
   );
 };
 
@@ -109,6 +111,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  container: {
+    flex: 1,
   },
 });
 

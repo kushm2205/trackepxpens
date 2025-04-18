@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Pressable,
+  Image,
 } from 'react-native';
 import axios from 'axios';
 import {auth, createUserWithEmailAndPassword} from '../services/firebase';
@@ -117,7 +118,7 @@ const Signup: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await axios.post('http://192.168.200.167:5000/api/send-otp', {email});
+      await axios.post('http://192.168.200.92:5000/api/send-otp', {email});
       Alert.alert('OTP Sent', 'Check your email for the OTP');
 
       setIsOtpSent(true);
@@ -134,7 +135,7 @@ const Signup: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        'http://192.168.200.167:5000/api/verify-otp',
+        'http://192.168.200.92:5000/api/verify-otp',
         {
           email,
           otp: Number(otp),
@@ -173,6 +174,17 @@ const Signup: React.FC = () => {
       setIsLoading(false);
     }
   };
+  const renderDigitBoxes = () => {
+    const boxes = [];
+    for (let i = 0; i < 6; i++) {
+      boxes.push(
+        <View key={i} style={styles.digitBox}>
+          <Text style={styles.digitText}>{otp[i] || ''}</Text>
+        </View>,
+      );
+    }
+    return boxes;
+  };
 
   const clearError = (field: keyof typeof errors) => {
     if (errors[field]) {
@@ -183,142 +195,156 @@ const Signup: React.FC = () => {
   return (
     <ScrollView style={styles.scrollContainer}>
       <View style={styles.container}>
-        <Text style={styles.title}>Create Account</Text>
-
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          value={name}
-          onChangeText={text => {
-            setName(text);
-            clearError('name');
-          }}
-          style={[styles.input, errors.name ? styles.inputError : null]}
-          placeholder="Enter a Name"
-        />
-        {errors.name ? (
-          <Text style={styles.errorText}>{errors.name}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={text => {
-            setEmail(text);
-            clearError('email');
-          }}
-          keyboardType="email-address"
-          style={[styles.input, errors.email ? styles.inputError : null]}
-          placeholder="Entre A Email Address"
-          autoCapitalize="none"
-        />
-        {errors.email ? (
-          <Text style={styles.errorText}>{errors.email}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          value={password}
-          onChangeText={text => {
-            setPassword(text);
-            clearError('password');
-          }}
-          secureTextEntry
-          style={[styles.input, errors.password ? styles.inputError : null]}
-          placeholder="Entre a Password"
-        />
-        {errors.password ? (
-          <Text style={styles.errorText}>{errors.password}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Confirm Password</Text>
-        <TextInput
-          value={confirmPassword}
-          onChangeText={text => {
-            setConfirmPassword(text);
-            clearError('confirmPassword');
-          }}
-          secureTextEntry
-          style={[
-            styles.input,
-            errors.confirmPassword ? styles.inputError : null,
-          ]}
-          placeholder="Entre A Confirm Password"
-        />
-        {errors.confirmPassword ? (
-          <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Phone Number</Text>
-        <View style={styles.phoneView}>
-          <TextInput
-            value={country}
-            onChangeText={text => {
-              setCountry(text);
-            }}
-            keyboardType="numeric"
-            style={styles.phonetext}
-            placeholder="+91"
-          />
-          <TextInput
-            value={phone}
-            onChangeText={text => {
-              setPhone(text);
-              clearError('phone');
-            }}
-            keyboardType="numeric"
-            style={[styles.input, errors.phone ? styles.inputError : null]}
-            placeholder="enter a mobile number"
-            maxLength={10}
-          />
+        <View style={styles.header}>
+          <View style={styles.position}>
+            <Image
+              source={require('../assets/pocket2.png')}
+              style={styles.image}
+            />
+            <Text style={styles.app}> Pocket Tracker</Text>
+          </View>
         </View>
-        {errors.phone ? (
-          <Text style={styles.errorText}>{errors.phone}</Text>
-        ) : null}
+        <View style={styles.body}>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            value={name}
+            onChangeText={text => {
+              setName(text);
+              clearError('name');
+            }}
+            style={[styles.input, errors.name ? styles.inputError : null]}
+            placeholder="Enter a Name"
+          />
+          {errors.name ? (
+            <Text style={styles.errorText}>{errors.name}</Text>
+          ) : null}
 
-        {!isOtpSent ? (
-          <TouchableOpacity
-            style={styles.button}
-            onPress={sendOtp}
-            disabled={isLoading}>
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Get Verification Code</Text>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <View>
-            <Text style={styles.label}>Enter OTP</Text>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={text => {
+              setEmail(text);
+              clearError('email');
+            }}
+            keyboardType="email-address"
+            style={[styles.input, errors.email ? styles.inputError : null]}
+            placeholder="Entre A Email Address"
+            autoCapitalize="none"
+          />
+          {errors.email ? (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          ) : null}
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={text => {
+              setPassword(text);
+              clearError('password');
+            }}
+            secureTextEntry
+            style={[styles.input, errors.password ? styles.inputError : null]}
+            placeholder="Entre a Password"
+          />
+          {errors.password ? (
+            <Text style={styles.errorText}>{errors.password}</Text>
+          ) : null}
+
+          <Text style={styles.label}>Confirm Password</Text>
+          <TextInput
+            value={confirmPassword}
+            onChangeText={text => {
+              setConfirmPassword(text);
+              clearError('confirmPassword');
+            }}
+            secureTextEntry
+            style={[
+              styles.input,
+              errors.confirmPassword ? styles.inputError : null,
+            ]}
+            placeholder="Entre A Confirm Password"
+          />
+          {errors.confirmPassword ? (
+            <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+          ) : null}
+
+          <Text style={styles.label}>Phone Number</Text>
+          <View style={styles.phoneView}>
             <TextInput
-              value={otp}
+              value={country}
               onChangeText={text => {
-                setOtp(text);
-                clearError('otp');
+                setCountry(text);
+              }}
+              keyboardType="phone-pad"
+              style={styles.phonetext}
+              placeholder="+91"
+              maxLength={3}
+            />
+            <TextInput
+              value={phone}
+              onChangeText={text => {
+                setPhone(text);
+                clearError('phone');
               }}
               keyboardType="numeric"
-              style={[styles.input, errors.otp ? styles.inputError : null]}
-              placeholder="123456"
-              maxLength={6}
+              style={[
+                styles.Phoneinput,
+                errors.phone ? styles.inputError : null,
+              ]}
+              placeholder="enter a mobile number"
+              maxLength={10}
             />
-            {errors.otp ? (
-              <Text style={styles.errorText}>{errors.otp}</Text>
-            ) : null}
+          </View>
+          {errors.phone ? (
+            <Text style={styles.errorText}>{errors.phone}</Text>
+          ) : null}
 
+          {!isOtpSent ? (
             <TouchableOpacity
               style={styles.button}
-              onPress={verifyOtp}
+              onPress={sendOtp}
               disabled={isLoading}>
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>
-                  Verify OTP & Create Account
-                </Text>
+                <Text style={styles.buttonText}>Get Verification Code</Text>
               )}
             </TouchableOpacity>
-          </View>
-        )}
+          ) : (
+            <View>
+              <Text style={styles.label}>Enter OTP</Text>
+              <TextInput
+                value={otp}
+                onChangeText={text => {
+                  setOtp(text);
+                  clearError('otp');
+                }}
+                keyboardType="numeric"
+                style={[styles.input, errors.otp ? styles.inputError : null]}
+                placeholder="123456"
+                maxLength={6}
+              />
 
+              {errors.otp ? (
+                <Text style={styles.errorText}>{errors.otp}</Text>
+              ) : null}
+
+              <TouchableOpacity
+                style={styles.button}
+                onPress={verifyOtp}
+                disabled={isLoading}>
+                {isLoading ? (
+                  <ActivityIndicator color="#4CBB9B" />
+                ) : (
+                  <Text style={styles.buttonText}>
+                    Verify OTP & Create Account
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         <TouchableOpacity
           style={styles.linkContainer}
           onPress={() => navigation.navigate('Login')}>
@@ -332,7 +358,7 @@ const Signup: React.FC = () => {
 const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   container: {
     padding: 20,
@@ -342,12 +368,37 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    marginLeft: 20,
+  },
+  header: {
+    backgroundColor: '#4CBB9B',
+    paddingVertical: 40,
+    paddingHorizontal: 40,
+    paddingLeft: 10,
+    marginRight: -50,
+    marginTop: -40,
+    borderBottomLeftRadius: 100,
+    borderBottomRightRadius: 20,
+    alignItems: 'center',
   },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 5,
     color: '#333',
+  },
+  position: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  app: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    marginTop: 25,
+    textAlign: 'center',
+    marginLeft: 20,
   },
   input: {
     borderWidth: 1,
@@ -369,16 +420,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   button: {
-    backgroundColor: '#4285F4',
+    backgroundColor: '#4CBB9B',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 0,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  body: {
+    padding: 20,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    borderRadius: 10,
+    elevation: 5,
+    shadowOpacity: 0.5,
   },
   linkContainer: {
     marginTop: 20,
@@ -386,20 +445,62 @@ const styles = StyleSheet.create({
   },
   phoneView: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 0,
     backgroundColor: '#f9f9f9',
     marginBottom: 10,
+  },
+
+  Phoneinput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginBottom: 10,
+    fontSize: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#f9f9f9',
+    width: '75%',
+    marginTop: 10,
   },
   phonetext: {
     fontSize: 16,
     color: '#333',
-    width: '10%',
+    width: '15%',
   },
   link: {
-    color: '#4285F4',
+    color: '#4CBB9B',
     fontSize: 16,
+  },
+  image: {
+    width: 80,
+    height: 80,
+    borderRadius: 50,
+    resizeMode: 'cover',
+    marginTop: 10,
+  },
+  otpContainer: {
+    flexDirection: 'row',
+  },
+  digitBox: {
+    width: 40,
+    height: 40,
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 5,
+    marginHorizontal: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  digitText: {
+    fontSize: 18,
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
 });
 
