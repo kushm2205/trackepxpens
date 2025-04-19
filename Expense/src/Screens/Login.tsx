@@ -8,6 +8,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import axios from 'axios';
 import {
@@ -137,9 +138,6 @@ const Login: React.FC = () => {
         await AsyncStorage.setItem('email', email);
 
         dispatch(login({userId, email}));
-
-        Alert.alert('Success', 'Login successful');
-        navigation.navigate('Home');
       }
     } catch (error) {
       Alert.alert('Error', 'Invalid OTP');
@@ -218,78 +216,88 @@ const Login: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        value={email}
-        onChangeText={handleEmailChange}
-        keyboardType="email-address"
-        style={[styles.input, errors.email ? styles.inputError : null]}
-        placeholder="your@email.com"
-        autoCapitalize="none"
-      />
-      {errors.email ? (
-        <Text style={styles.errorText}>{errors.email}</Text>
-      ) : null}
-
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        value={password}
-        onChangeText={handlePasswordChange}
-        secureTextEntry
-        style={[styles.input, errors.password ? styles.inputError : null]}
-        placeholder="******"
-      />
-      {errors.password ? (
-        <Text style={styles.errorText}>{errors.password}</Text>
-      ) : null}
-
-      <TouchableOpacity
-        style={styles.forgotPassword}
-        onPress={handleForgotPassword}>
-        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-      </TouchableOpacity>
-
-      {!isOtpSent ? (
-        <TouchableOpacity
-          style={styles.button}
-          onPress={verifyEmailPassword}
-          disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login & Get OTP</Text>
-          )}
-        </TouchableOpacity>
-      ) : (
-        <>
-          <Text style={styles.label}>Enter OTP</Text>
-          <TextInput
-            value={otp}
-            onChangeText={handleOtpChange}
-            keyboardType="numeric"
-            style={[styles.input, errors.otp ? styles.inputError : null]}
-            placeholder="123456"
-            maxLength={6}
+      <View style={styles.header}>
+        <View style={styles.position}>
+          <Image
+            source={require('../assets/pocket2.png')}
+            style={styles.image}
           />
-          {errors.otp ? (
-            <Text style={styles.errorText}>{errors.otp}</Text>
-          ) : null}
+          <Text style={styles.app}> Pocket Tracker</Text>
+        </View>
+      </View>
+      <View style={styles.body}>
+        <Text style={styles.title}>Welcome Back</Text>
 
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          value={email}
+          onChangeText={handleEmailChange}
+          keyboardType="email-address"
+          style={[styles.input, errors.email ? styles.inputError : null]}
+          placeholder="your@email.com"
+          autoCapitalize="none"
+        />
+        {errors.email ? (
+          <Text style={styles.errorText}>{errors.email}</Text>
+        ) : null}
+
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          value={password}
+          onChangeText={handlePasswordChange}
+          secureTextEntry
+          style={[styles.input, errors.password ? styles.inputError : null]}
+          placeholder="******"
+        />
+        {errors.password ? (
+          <Text style={styles.errorText}>{errors.password}</Text>
+        ) : null}
+
+        <TouchableOpacity
+          style={styles.forgotPassword}
+          onPress={handleForgotPassword}>
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        {!isOtpSent ? (
           <TouchableOpacity
             style={styles.button}
-            onPress={verifyOtp}
+            onPress={verifyEmailPassword}
             disabled={isLoading}>
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Verify OTP</Text>
+              <Text style={styles.buttonText}>Login & Get OTP</Text>
             )}
           </TouchableOpacity>
-        </>
-      )}
+        ) : (
+          <View>
+            <Text style={styles.label}>Enter OTP</Text>
+            <TextInput
+              value={otp}
+              onChangeText={handleOtpChange}
+              keyboardType="numeric"
+              style={[styles.input, errors.otp ? styles.inputError : null]}
+              placeholder="123456"
+              maxLength={6}
+            />
+            {errors.otp ? (
+              <Text style={styles.errorText}>{errors.otp}</Text>
+            ) : null}
 
+            <TouchableOpacity
+              style={styles.button}
+              onPress={verifyOtp}
+              disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Verify OTP</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
       <TouchableOpacity
         style={styles.linkContainer}
         onPress={() => navigation.navigate('Signup')}>
@@ -317,16 +325,16 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     color: '#333',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    marginBottom: 10,
-    fontSize: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
-  },
+  // input: {
+  //   borderWidth: 1,
+  //   borderColor: '#ddd',
+  //   borderRadius: 5,
+  //   marginBottom: 10,
+  //   fontSize: 16,
+  //   paddingVertical: 10,
+  //   paddingHorizontal: 15,
+  //   backgroundColor: '#f9f9f9',
+  // },
   inputError: {
     borderColor: 'red',
   },
@@ -336,7 +344,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   button: {
-    backgroundColor: '#4285F4',
+    backgroundColor: '#4CBB9B',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
@@ -352,15 +360,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: {
-    color: '#4285F4',
+    color: '#4CBB9B',
     fontSize: 16,
+  },
+  header: {
+    backgroundColor: '#4CBB9B',
+    paddingVertical: 40,
+    paddingHorizontal: 40,
+    paddingLeft: 10,
+    marginRight: -50,
+    marginTop: -40,
+    borderBottomLeftRadius: 100,
+    borderBottomRightRadius: 20,
+    alignItems: 'center',
+  },
+  app: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    marginTop: 25,
+    textAlign: 'center',
+    marginLeft: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginBottom: 10,
+    fontSize: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#f9f9f9',
+    width: '90%',
+  },
+  image: {
+    width: 80,
+    height: 80,
+    borderRadius: 50,
+    resizeMode: 'cover',
+    marginTop: 10,
+  },
+  position: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: 15,
   },
+  body: {
+    padding: 20,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    borderRadius: 10,
+    elevation: 5,
+    shadowOpacity: 0.5,
+    marginTop: 50,
+  },
   forgotPasswordText: {
-    color: '#4285F4',
+    color: '#4CBB9B',
     fontSize: 14,
   },
 });

@@ -85,8 +85,8 @@ interface ContactItem {
   name?: string;
   displayName?: string;
   phone?: string;
-  phoneNumbers?: Array<{number: string; label?: string}>;
-  profilePicture?: string | null;
+  phoneNumbers?: {number: string}[];
+  profilePicture?: string;
   isFirebaseUser?: boolean;
 }
 interface GroupState {

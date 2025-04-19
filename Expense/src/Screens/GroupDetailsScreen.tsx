@@ -455,7 +455,6 @@ const GroupDetailsScreen: React.FC = () => {
         <TouchableOpacity style={styles.chartButton} onPress={prepareChartData}>
           <Text style={styles.chartButtonText}>View Expense Chart</Text>
         </TouchableOpacity>
-        ;
       </View>
     </View>
   );

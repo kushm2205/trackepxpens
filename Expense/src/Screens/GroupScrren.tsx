@@ -2,7 +2,6 @@ import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
   Text,
-  Button,
   FlatList,
   TouchableOpacity,
   Image,
@@ -21,6 +20,7 @@ import {
   GestureHandlerRootView,
   Swipeable,
   RectButton,
+  Pressable,
 } from 'react-native-gesture-handler';
 import {
   collection,
@@ -30,6 +30,7 @@ import {
   writeBatch,
   doc,
 } from 'firebase/firestore';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const defaultGroupImage = require('../assets/download.jpeg');
 type GroupScreenProp = StackNavigationProp<RootStackParamList, 'GroupScreen'>;
@@ -45,51 +46,18 @@ const GroupScreen = () => {
   const navigation = useNavigation<GroupScreenProp>();
   const [retryAttempt, setRetryAttempt] = useState(0);
 
-  // Function to fetch groups
   const loadGroups = useCallback(() => {
     if (authState.isAuthenticated && authState.userId) {
       setLoader(true);
       dispatch(fetchGroups(authState.userId))
-        .unwrap()
         .then(() => setLoader(false))
         .catch(() => setLoader(false));
     }
   }, [authState.isAuthenticated, authState.userId, dispatch]);
 
-  // Load groups on initial mount
   useEffect(() => {
     loadGroups();
   }, [loadGroups, retryAttempt]);
-
-  // Refresh groups when screen comes into focus - with force refresh
-  useFocusEffect(
-    useCallback(() => {
-      // Force a refresh every time the screen comes into focus
-      if (authState.isAuthenticated && authState.userId) {
-        setLoader(true);
-        dispatch(fetchGroups(authState.userId))
-          .unwrap()
-          .then(() => setLoader(false))
-          .catch(() => setLoader(false));
-      }
-    }, [authState.isAuthenticated, authState.userId, dispatch]),
-  );
-
-  // Add explicit listener for navigation focus events
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      // Force refresh when screen is focused
-      if (authState.isAuthenticated && authState.userId) {
-        setLoader(true);
-        dispatch(fetchGroups(authState.userId))
-          .unwrap()
-          .then(() => setLoader(false))
-          .catch(() => setLoader(false));
-      }
-    });
-
-    return unsubscribe;
-  }, [navigation, authState.isAuthenticated, authState.userId, dispatch]);
 
   const handleCreateGroupPress = () => {
     navigation.navigate('CreateGroup');
@@ -118,6 +86,7 @@ const GroupScreen = () => {
               collection(db, 'expenses'),
               where('groupId', '==', groupId),
             );
+
             const expensesSnapshot = await getDocs(expensesQuery);
             expensesSnapshot.forEach(expenseDoc => {
               batch.delete(expenseDoc.ref);
@@ -162,6 +131,26 @@ const GroupScreen = () => {
     );
   };
 
+  const getGroupImageSource = (groupImage: string | null | undefined) => {
+    if (!groupImage) {
+      return defaultGroupImage;
+    }
+
+    if (!isNaN(Number(groupImage))) {
+      return defaultGroupImage;
+    }
+
+    try {
+      if (groupImage.startsWith('http') || groupImage.startsWith('file://')) {
+        return {uri: groupImage};
+      }
+      return defaultGroupImage;
+    } catch (error) {
+      console.error('Error processing group image:', error);
+      return defaultGroupImage;
+    }
+  };
+
   const renderGroupItem = ({item}: {item: group}) => (
     <GestureHandlerRootView>
       <Swipeable
@@ -175,17 +164,16 @@ const GroupScreen = () => {
             navigation.navigate('GroupDetailsScreen', {groupId: item.id});
           }}>
           <Image
-            source={
-              item.groupImageUrl ? {uri: item.groupImageUrl} : defaultGroupImage
-            }
+            source={getGroupImageSource(item.groupImage)}
             style={styles.groupImage}
+            defaultSource={defaultGroupImage}
           />
           <View style={styles.groupInfo}>
             <Text style={styles.groupName}>{item.groupName}</Text>
-            <Text
-              style={
-                styles.memberCount
-              }>{`Members: ${item.membersCount}`}</Text>
+            <Text style={styles.memberCount}>
+              <Ionicons name="people" size={14} color="#666" />{' '}
+              {item.membersCount} members
+            </Text>
           </View>
         </TouchableOpacity>
       </Swipeable>
@@ -205,10 +193,11 @@ const GroupScreen = () => {
     return (
       <View style={styles.authContainer}>
         <Text style={styles.errorText}>Please log in to view your groups</Text>
-        <Button
-          title="Go to Login"
-          onPress={() => navigation.navigate('Login')}
-        />
+        <TouchableOpacity
+          style={styles.buttonStyle}
+          onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.buttonText}>Go to Login</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -216,17 +205,21 @@ const GroupScreen = () => {
   return (
     <GestureHandlerRootView style={{flex: 1}}>
       <View style={styles.container}>
-        <Text style={styles.header}>Groups</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>Groups</Text>
+        </View>
         {loader || loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0000ff" />
+            <ActivityIndicator size="large" color="#4CBB9B" />
             <Text style={styles.statusText}>Loading groups...</Text>
           </View>
         ) : null}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <Button title="Retry" onPress={handleRetry} />
+            <TouchableOpacity style={styles.buttonStyle} onPress={handleRetry}>
+              <Text style={styles.buttonText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
         {!loading && !loader && (!groups || groups.length === 0) && !error && (
@@ -234,7 +227,11 @@ const GroupScreen = () => {
             <Text style={styles.statusText}>
               No groups found. Create your first group!
             </Text>
-            <Button title="Create New Group" onPress={handleCreateGroupPress} />
+            <TouchableOpacity
+              style={styles.buttonStyle}
+              onPress={handleCreateGroupPress}>
+              <Text style={styles.buttonText}>Create New Group</Text>
+            </TouchableOpacity>
           </View>
         )}
         {!loading && !loader && groups && groups.length > 0 && (
@@ -243,11 +240,15 @@ const GroupScreen = () => {
             renderItem={renderGroupItem}
             keyExtractor={item => item.id}
             style={styles.groupsList}
+            contentContainerStyle={styles.groupsListContent}
           />
         )}
-        <View style={styles.buttonContainer}>
-          <Button title="Create New Group" onPress={handleCreateGroupPress} />
-        </View>
+
+        <TouchableOpacity
+          style={styles.fabButton}
+          onPress={handleCreateGroupPress}>
+          <Ionicons name="add-circle-outline" size={30} color="grey" />
+        </TouchableOpacity>
       </View>
     </GestureHandlerRootView>
   );
@@ -256,37 +257,56 @@ const GroupScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
-    backgroundColor: '#fff',
+    padding: 12,
+    backgroundColor: '#f7f7f7',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   header: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 15,
+    color: '#333',
   },
   groupsList: {
     flex: 1,
   },
+  groupsListContent: {
+    paddingVertical: 5,
+  },
   groupItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
+    padding: 12,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   groupImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    marginRight: 15,
+    borderWidth: 0.5,
+    borderColor: 'grey',
   },
   groupInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   groupName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
+    color: '#4CBB9B',
+    marginBottom: 5,
   },
   memberCount: {
     fontSize: 14,
@@ -342,15 +362,43 @@ const styles = StyleSheet.create({
     width: 80,
   },
   deleteAction: {
-    backgroundColor: 'red',
+    backgroundColor: '#3c7d75',
   },
   chatAction: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CBB9B',
   },
   actionText: {
     color: 'white',
     fontWeight: 'bold',
     padding: 10,
+  },
+  fabButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#4CBB9B',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  buttonStyle: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 

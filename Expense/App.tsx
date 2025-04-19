@@ -1,5 +1,11 @@
 import React, {useEffect} from 'react';
-import {View, ActivityIndicator, StyleSheet, SafeAreaView} from 'react-native';
+import {
+  View,
+  ActivityIndicator,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {useSelector, useDispatch, Provider} from 'react-redux';
@@ -31,14 +37,33 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
-    <Stack.Screen name="Login" component={Login} />
-    <Stack.Screen name="Signup" component={Signup} />
+    <Stack.Screen
+      name="Login"
+      component={Login}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="Signup"
+      component={Signup}
+      options={{headerShown: false}}
+    />
   </Stack.Navigator>
 );
 
 const AppStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
-    <Stack.Screen name="Home" component={Home} />
+  <Stack.Navigator>
+    <Stack.Screen
+      name="Home"
+      component={Home}
+      options={{
+        headerTitle: () => (
+          <Image
+            source={require('./src/assets/pocket3.png')}
+            style={{width: 180, height: 220, resizeMode: 'contain'}}
+          />
+        ),
+      }}
+    />
     {/* <Stack.Screen name="GroupScreen" component={GroupScreen} /> */}
     <Stack.Screen name="AddExpense" component={ExpenseeScreen} />
     <Stack.Screen name="CreateGroup" component={CreateGroup} />

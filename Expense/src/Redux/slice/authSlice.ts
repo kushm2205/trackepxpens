@@ -17,7 +17,6 @@ export const loadAuthState = createAsyncThunk(
 
       console.log('Loading auth state - userId:', userId);
       if (userId) {
-        // Get subscription status from Firestore
         const userDoc = await firestore().collection('users').doc(userId).get();
 
         return {
@@ -46,7 +45,6 @@ export const loadAuthState = createAsyncThunk(
   },
 );
 
-// Save auth state to AsyncStorage
 const saveAuthData = async (
   userId: string | null,
   email: string | null,
@@ -123,7 +121,7 @@ const authSlice = createSlice({
     updateProfile: (state, action) => {
       if (action.payload.photoURL) {
         state.photoURL = action.payload.photoURL;
-        // Only update the photoURL in AsyncStorage
+
         AsyncStorage.setItem('profilePicture', action.payload.photoURL);
       }
     },
