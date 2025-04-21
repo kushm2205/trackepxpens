@@ -73,7 +73,11 @@ const AppStack = () => (
     <Stack.Screen name="GroupDetailsScreen" component={GroupDetailsScreen} />
     <Stack.Screen name="EditExpense" component={EditExpenseScreen} />
 
-    <Stack.Screen name="GroupChatScreen" component={ChatScreen} />
+    <Stack.Screen
+      name="GroupChatScreen"
+      component={ChatScreen}
+      options={{headerShown: false}}
+    />
     <Stack.Screen name="EditFriendExpenss" component={EditFriendExpenss} />
     <Stack.Screen
       name="ChatScreenFriend"

@@ -23,10 +23,13 @@ import {db} from '../services/firebase';
 import {useSelector} from 'react-redux';
 import {RootState} from '../Redux/store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import {useNavigation} from '@react-navigation/native';
 
 const ChatScreen = ({route}: any) => {
   const {groupId, groupName} = route.params;
   const [message, setMessage] = useState('');
+  const navigation = useNavigation();
   const [messages, setMessages] = useState<any[]>([]);
   const [userName, setUserName] = useState('');
   const authState = useSelector((state: RootState) => state.auth);
@@ -132,6 +135,11 @@ const ChatScreen = ({route}: any) => {
         style={styles.container}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
         <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
           <Text style={styles.headerText}>{groupName}</Text>
         </View>
 
@@ -183,12 +191,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#fff',
+    flexDirection: 'row',
+
+    alignItems: 'center',
   },
+
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
-    textAlign: 'center',
+
     color: '#333',
+  },
+  backButton: {
+    padding: 8,
   },
   messagesContainer: {
     padding: 10,

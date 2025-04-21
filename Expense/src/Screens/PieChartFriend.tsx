@@ -38,23 +38,18 @@ const PiChartFriend = () => {
   const [totalUserPaid, setTotalUserPaid] = useState(0);
   const [totalFriendPaid, setTotalFriendPaid] = useState(0);
 
-  // Colors for the charts
   const colors = ['#FF9500', '#007AFF', '#34C759', '#FF3B30', '#5856D6'];
 
   useEffect(() => {
     if (!expenses || !loggedInUserId) return;
 
-    // Get date 5 days ago for daily breakdown
     const fiveDaysAgo = startOfDay(subDays(new Date(), 5));
 
-    // Calculate overall totals for pie chart (all transactions)
     let userPaidTotal = 0;
     let friendPaidTotal = 0;
 
-    // Create daily expense data (last 5 days only)
     const dailyData: Record<string, DailyExpense> = {};
 
-    // Initialize the last 5 days for daily breakdown
     for (let i = 0; i < 5; i++) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'yyyy-MM-dd');
@@ -64,8 +59,6 @@ const PiChartFriend = () => {
         friendPaid: 0,
       };
     }
-
-    // Process ALL expenses for pie chart
     expenses.forEach((expense: any) => {
       if (expense.paidBy === loggedInUserId) {
         userPaidTotal += expense.amount;
@@ -73,14 +66,12 @@ const PiChartFriend = () => {
         friendPaidTotal += expense.amount;
       }
 
-      // Process only recent expenses for daily breakdown
       const expenseDate = new Date(expense.createdAt);
       if (
         isWithinInterval(expenseDate, {start: fiveDaysAgo, end: new Date()})
       ) {
         const dateStr = format(expenseDate, 'yyyy-MM-dd');
 
-        // Make sure the date exists in our dailyData
         if (!dailyData[dateStr]) {
           dailyData[dateStr] = {
             date: format(expenseDate, 'MMM dd'),
@@ -97,11 +88,9 @@ const PiChartFriend = () => {
       }
     });
 
-    // Save total amounts for display
     setTotalUserPaid(userPaidTotal);
     setTotalFriendPaid(friendPaidTotal);
 
-    // Create pie chart data with ALL transactions
     const chartData: ChartData[] = [];
 
     if (userPaidTotal > 0) {
@@ -124,7 +113,6 @@ const PiChartFriend = () => {
       });
     }
 
-    // If no expenses, add placeholder
     if (chartData.length === 0) {
       chartData.push({
         name: 'No expenses',
@@ -162,13 +150,9 @@ const PiChartFriend = () => {
     barPercentage: 0.5,
   };
 
-  // Calculate balance between user and friend
   const calculateBalance = () => {
-    // Calculate what each person should have paid
     const totalExpenses = totalUserPaid + totalFriendPaid;
     const shouldHavePaid = totalExpenses / 2;
-
-    // Calculate who owes whom
     const userBalance = totalUserPaid - shouldHavePaid;
 
     if (userBalance > 0) {
@@ -305,11 +289,11 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#29846A',
   },
   subHeaderText: {
     fontSize: 16,
-    color: '#666',
+    color: 'grey',
     marginTop: 4,
   },
   chartContainer: {
@@ -338,13 +322,13 @@ const styles = StyleSheet.create({
   balanceText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#4BBC9B',
     textAlign: 'center',
     marginBottom: 8,
   },
   totalText: {
     fontSize: 16,
-    color: '#333',
+    color: 'grey',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -380,7 +364,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#333',
+    color: '#4bbc9b',
   },
   dayContainer: {
     marginVertical: 8,
@@ -389,7 +373,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 4,
-    color: '#333',
+    color: 'grey',
   },
   expenseRow: {
     flexDirection: 'row',
@@ -410,9 +394,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF9500',
   },
   barText: {
-    color: '#fff',
+    color: '#4BBC9B',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
   legendContainer: {
     flexDirection: 'row',
@@ -435,12 +419,12 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 14,
-    color: '#333',
+    color: '#4bbc9b',
   },
   summaryText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#29846A',
     textAlign: 'center',
     margin: 16,
   },

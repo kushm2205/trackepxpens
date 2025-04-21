@@ -165,16 +165,15 @@ const AddFriendExpense = () => {
             <Text style={styles.expenseName}>{item.description}</Text>
             <Text style={styles.expenseAmount}>₹{item.amount.toFixed(2)}</Text>
           </View>
-          <Text style={styles.expenseDetail}>
-            Paid by: {paidBy} - {date}
-          </Text>
+          <Text style={styles.expenseDetail}>Paid by: {paidBy}</Text>
+          <Text style={styles.expenseDetail}> {date}</Text>
           <Text style={styles.expenseDetail}>
             Split between:{' '}
             {item.splitBetween
               .map((id: string) =>
                 id === loggedInUserId ? 'You' : friend.name,
               )
-              .join(', ')}
+              .join(',')}
           </Text>
           <Text style={styles.splitAmount}>
             {item.paidBy === loggedInUserId
@@ -208,7 +207,7 @@ const AddFriendExpense = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size="large" color="#4BBC9B" />
       </View>
     );
   }
@@ -216,16 +215,15 @@ const AddFriendExpense = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>
+        <Text
+          style={[
+            styles.headerText,
+            totalOwed > 0 ? styles.positive : styles.negative,
+          ]}>
           Total {totalOwed >= 0 ? 'Owes' : 'Gets back'}: ₹
           {Math.abs(totalOwed).toFixed(2)}
         </Text>
         <View style={styles.buttonContainer}>
-          <Pressable
-            style={[styles.actionButton, styles.settleButton]}
-            onPress={handleSettleUp}>
-            <Text style={styles.actionButtonText}>Settle Up</Text>
-          </Pressable>
           <Pressable
             style={[styles.actionButton, styles.addButton]}
             onPress={() =>
@@ -233,12 +231,18 @@ const AddFriendExpense = () => {
             }>
             <Text style={styles.actionButtonText}>Add Expense</Text>
           </Pressable>
+          <Pressable
+            style={[styles.actionButton, styles.settleButton]}
+            onPress={handleSettleUp}>
+            <Text style={styles.actionButtonText}>Settle Up</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.actionButton, styles.chartButton]}
+            onPress={handleChartPress}>
+            <Text style={styles.actionButtonText}>View Chart</Text>
+          </Pressable>
         </View>
-        <Pressable
-          style={[styles.actionButton, styles.chartButton, {marginTop: 10}]}
-          onPress={handleChartPress}>
-          <Text style={styles.actionButtonText}>View Charts</Text>
-        </Pressable>
       </View>
       <FlatList
         data={expenses}
@@ -266,7 +270,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    padding: 16,
     backgroundColor: '#fff',
     marginBottom: 8,
     shadowColor: '#000',
@@ -274,38 +277,62 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    paddingBottom: 20,
+    paddingTop: 20,
   },
   headerText: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
     textAlign: 'center',
-    color: '#333',
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginTop: 10,
+    marginLeft: 10,
+    marginRight: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
   },
   actionButton: {
-    padding: 12,
-    borderRadius: 8,
     flex: 1,
-    marginHorizontal: 8,
+    padding: 6,
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
   },
   addButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#29846A',
+    marginRight: 6,
+    elevation: 5,
   },
   settleButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#29846A',
+    marginRight: 6,
+    elevation: 5,
   },
   chartButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#29846A',
+    marginRight: 8,
+    elevation: 5,
   },
   actionButtonText: {
-    color: 'white',
+    color: '#333',
     fontWeight: 'bold',
+    fontSize: 18,
+  },
+  positive: {
+    color: '#00ff00',
+  },
+  negative: {
+    color: '#ff0000',
   },
   expenseItem: {
     backgroundColor: '#fff',
@@ -320,7 +347,7 @@ const styles = StyleSheet.create({
   },
   highlightedExpense: {
     borderLeftWidth: 4,
-    borderLeftColor: '#007bff',
+    borderLeftColor: '#4BBC9B',
   },
   expenseHeader: {
     flexDirection: 'row',
@@ -334,17 +361,17 @@ const styles = StyleSheet.create({
   },
   expenseDetail: {
     fontSize: 14,
-    color: '#666',
+    color: 'grey',
     marginBottom: 4,
   },
   expenseAmount: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#007bff',
+    color: '#4BBC9B',
   },
   splitAmount: {
     fontSize: 14,
-    color: '#333',
+    color: 'grey',
     marginTop: 8,
   },
   emptyContainer: {

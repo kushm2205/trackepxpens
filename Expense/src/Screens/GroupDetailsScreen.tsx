@@ -166,7 +166,7 @@ const GroupDetailsScreen: React.FC = () => {
 
     Alert.alert(
       'Confirm Settlement',
-      `Are you sure you want to clear all ${expenses.length} expenses in this group? This action cannot be undone.`,
+      `Are you sure you want to clear all ${expenses.length} expenses in this group`,
       [
         {
           text: 'Cancel',
@@ -178,15 +178,12 @@ const GroupDetailsScreen: React.FC = () => {
             try {
               const batch = writeBatch(db);
 
-              // Add all expenses to the batch for deletion
               expenses.forEach(expense => {
                 const expenseRef = doc(db, 'expenses', expense.id);
                 batch.delete(expenseRef);
               });
 
               await batch.commit();
-
-              Alert.alert('Success', 'All expenses have been settled');
             } catch (error) {
               console.error('Error settling up:', error);
               Alert.alert('Error', 'Failed to settle up. Please try again.');
@@ -311,22 +308,18 @@ const GroupDetailsScreen: React.FC = () => {
       return;
     }
 
-    // Calculate total expenses per member
     const memberExpenses: Record<string, number> = {};
 
-    // Initialize all members with 0
     selectedGroup?.members.forEach((memberId: string) => {
       memberExpenses[memberId] = 0;
     });
 
-    // Sum up expenses for each member
     expenses.forEach(expense => {
       memberExpenses[expense.paidBy] += expense.amount;
     });
 
-    // Prepare data for the chart
     const data = Object.entries(memberExpenses)
-      .filter(([_, amount]) => amount > 0) // Only show members with expenses
+      .filter(([_, amount]) => amount > 0)
       .map(([memberId, amount]) => ({
         name: memberNames[memberId] || memberId,
         amount,
@@ -337,11 +330,10 @@ const GroupDetailsScreen: React.FC = () => {
     navigation.navigate('PieChart', {
       chartData: data,
       groupName: selectedGroup?.groupName || 'Group',
-      memberBalances: memberBalances, // Pass the member balances array
+      memberBalances: memberBalances,
     });
   };
 
-  // Helper function to generate random colors
   const getRandomColor = () => {
     const letters = '0123456789ABCDEF';
     let color = '#';
@@ -353,7 +345,8 @@ const GroupDetailsScreen: React.FC = () => {
 
   return (
     <View style={styles.mainContainer}>
-      <ScrollView style={styles.container}>
+      <View style={styles.headercontainer}>
+        <Text style={styles.groupName}>{selectedGroup.groupName}</Text>
         {selectedGroup.groupImageUrl && (
           <Image
             source={{uri: selectedGroup.groupImageUrl}}
@@ -361,9 +354,41 @@ const GroupDetailsScreen: React.FC = () => {
             resizeMode="cover"
           />
         )}
-
-        <Text style={styles.groupName}>{selectedGroup.groupName}</Text>
-
+      </View>
+      <View style={styles.tabButtonContainer}>
+        <TouchableOpacity
+          style={[styles.tabButton, styles.addButton]}
+          onPress={handleAddExpense}>
+          <Text style={styles.tabButtonText}>Add Expense</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, styles.settleButton]}
+          onPress={handleSettleUp}>
+          <Text style={styles.tabButtonText}>Settle Up</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, styles.chartButton]}
+          onPress={prepareChartData}>
+          <Text style={styles.tabButtonText}>View Chart</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView style={styles.container}>
+        <Text style={styles.sectionTitle}>Members</Text>
+        <View style={styles.membersContainer}>
+          {selectedGroup.members.map((memberId: string) => (
+            <View key={memberId} style={styles.memberItem}>
+              <Text
+                style={[
+                  styles.memberName,
+                  memberId === currentUserId && styles.currentUserHighlight,
+                ]}>
+                {memberId === currentUserId
+                  ? `${memberNames[memberId] || memberId} (You)`
+                  : memberNames[memberId] || memberId}
+              </Text>
+            </View>
+          ))}
+        </View>
         <Text style={styles.sectionTitle}>Your Balance</Text>
         <View style={styles.userBalanceContainer}>
           {totalBalance !== 0 ? (
@@ -417,64 +442,31 @@ const GroupDetailsScreen: React.FC = () => {
         ) : (
           <FlatList
             data={expenses}
+            style={styles.ex}
             renderItem={renderExpenseItem}
             keyExtractor={item => item.id}
             scrollEnabled={false}
           />
         )}
-
-        <Text style={styles.sectionTitle}>Members</Text>
-        <View style={styles.membersContainer}>
-          {selectedGroup.members.map((memberId: string) => (
-            <View key={memberId} style={styles.memberItem}>
-              <Text
-                style={[
-                  styles.memberName,
-                  memberId === currentUserId && styles.currentUserHighlight,
-                ]}>
-                {memberId === currentUserId
-                  ? `${memberNames[memberId] || memberId} (You)`
-                  : memberNames[memberId] || memberId}
-              </Text>
-            </View>
-          ))}
-        </View>
       </ScrollView>
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.settleButton]}
-          onPress={handleSettleUp}>
-          <Text style={styles.actionButtonText}>Settle Up</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.addButton]}
-          onPress={handleAddExpense}>
-          <Text style={styles.actionButtonText}>Add Expense</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.chartButton} onPress={prepareChartData}>
-          <Text style={styles.chartButtonText}>View Expense Chart</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  ex: {
+    marginBottom: 20,
+  },
   mainContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   container: {
     flex: 1,
-    padding: 16,
+    padding: 10,
   },
   chartButton: {
-    backgroundColor: '#6a1b9a',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: '#29846A',
   },
   chartButtonText: {
     color: 'white',
@@ -486,7 +478,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   errorContainer: {
     flex: 1,
@@ -501,24 +493,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   groupImage: {
-    width: '100%',
-    height: 200,
+    width: '95%',
+    alignSelf: 'center',
+    height: 150,
+    resizeMode: 'cover',
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   groupName: {
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    marginHorizontal: 20,
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
+    color: '#4CBB9B',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-    color: '#333',
+    marginBottom: 5,
+    color: '#4CBB9B',
   },
+
   expenseItem: {
     backgroundColor: '#fff',
     borderRadius: 8,
@@ -530,9 +526,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  headercontainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 10,
+    borderRadius: 10,
+    elevation: 5,
+    shadowOpacity: 0.5,
+    marginTop: 10,
+  },
   highlightedExpense: {
     borderLeftWidth: 4,
-    borderLeftColor: '#007bff',
+    borderLeftColor: '#4CBB9B',
   },
   expenseHeader: {
     flexDirection: 'row',
@@ -548,7 +552,7 @@ const styles = StyleSheet.create({
   expenseAmount: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#007bff',
+    color: 'grey',
   },
   expensePaidBy: {
     fontSize: 14,
@@ -562,7 +566,7 @@ const styles = StyleSheet.create({
   },
   expenseSplit: {
     fontSize: 14,
-    color: '#666',
+    color: 'grey',
     fontStyle: 'italic',
   },
   noExpensesText: {
@@ -602,6 +606,40 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#666',
+  },
+  tabButtonContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+    marginLeft: 10,
+    marginRight: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  tabButton: {
+    flex: 1,
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  tabButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+
+  tabButtonActive: {
+    borderBottomColor: '#33FFFF',
+  },
+  tabButtonTextActive: {
+    color: '#33FFFF',
   },
   balanceItem: {
     flexDirection: 'row',
@@ -665,15 +703,9 @@ const styles = StyleSheet.create({
   },
   currentUserHighlight: {
     fontWeight: 'bold',
-    color: '#007bff',
+    color: '#4CBB9B',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: '#f5f5f5',
-  },
+
   actionButton: {
     flex: 1,
     padding: 16,
@@ -683,10 +715,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   settleButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#29846A',
+    marginRight: 6,
+    elevation: 5,
   },
   addButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#29846A',
+    marginRight: 6,
+    elevation: 5,
   },
   actionButtonText: {
     color: 'white',

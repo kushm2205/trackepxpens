@@ -495,13 +495,13 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   createButton: {
-    backgroundColor: '#4CBB7c',
+    backgroundColor: '#4CBB9B',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
   },
   disabledButton: {
-    backgroundColor: '#4CBB9B',
+    backgroundColor: '#29846A',
   },
   createButtonText: {
     color: 'white',

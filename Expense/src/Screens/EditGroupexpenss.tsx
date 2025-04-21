@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import {useSelector} from 'react-redux';
 import {RootState} from '../Redux/store';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {doc, getDoc, updateDoc, deleteDoc} from 'firebase/firestore';
 import {db} from '../services/firestore';
-import {Picker} from '@react-native-picker/picker';
 
 const EditExpenseScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -30,6 +31,9 @@ const EditExpenseScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [groupMembers, setGroupMembers] = useState<string[]>([]);
+
+  // Modal state
+  const [isModalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,6 +143,19 @@ const EditExpenseScreen: React.FC = () => {
     );
   };
 
+  const handleMemberSelect = (memberId: string) => {
+    setPaidBy(memberId);
+    setModalVisible(false);
+  };
+
+  const renderModalItem = ({item}: {item: string}) => (
+    <TouchableOpacity
+      style={styles.modalItem}
+      onPress={() => handleMemberSelect(item)}>
+      <Text style={styles.modalItemText}>{memberNames[item] || item}</Text>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -170,19 +187,36 @@ const EditExpenseScreen: React.FC = () => {
         />
 
         <Text style={styles.label}>Paid by</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={paidBy}
-            onValueChange={itemValue => setPaidBy(itemValue)}>
-            {groupMembers.map(memberId => (
-              <Picker.Item
-                key={memberId}
-                label={memberNames[memberId] || memberId}
-                value={memberId}
+        <TouchableOpacity
+          style={styles.pickerButton}
+          onPress={() => setModalVisible(true)}>
+          <Text style={styles.pickerButtonText}>
+            {paidBy ? memberNames[paidBy] || paidBy : 'Select member'}
+          </Text>
+        </TouchableOpacity>
+
+        <Modal
+          visible={isModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Member</Text>
+              <FlatList
+                data={groupMembers}
+                renderItem={renderModalItem}
+                keyExtractor={item => item}
+                style={styles.modalList}
               />
-            ))}
-          </Picker>
-        </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalCloseText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         <Text style={styles.label}>Split between</Text>
         <View style={styles.membersContainer}>
@@ -247,31 +281,34 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#333',
+    color: '#29846A',
     textAlign: 'center',
   },
   label: {
     fontSize: 16,
     marginBottom: 8,
-    color: '#333',
+    color: '#4CBB9B',
     fontWeight: '500',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: 'grey',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
   },
-  pickerContainer: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
+  pickerButton: {
+    backgroundColor: '#4CBB9B',
     borderRadius: 8,
+    padding: 12,
     marginBottom: 16,
-    overflow: 'hidden',
+  },
+  pickerButtonText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
   },
   membersContainer: {
     marginBottom: 24,
@@ -288,23 +325,23 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   selectedMember: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff',
+    backgroundColor: '#3fff',
+    borderColor: '#3fff',
   },
   memberName: {
     fontSize: 16,
-    color: '#333',
+    color: 'black',
   },
   selectedMemberText: {
-    color: '#fff',
+    color: 'black',
   },
   checkmark: {
-    color: '#fff',
+    color: '#29846A',
     fontSize: 16,
     fontWeight: 'bold',
   },
   updateButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#4CBB9B',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -318,7 +355,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#ff3b30',
+    borderColor: '#4CBB9B',
   },
   buttonText: {
     color: '#fff',
@@ -329,6 +366,50 @@ const styles = StyleSheet.create({
     color: '#ff3b30',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16,
+    color: '#29846A',
+  },
+  modalList: {
+    maxHeight: 300,
+  },
+  modalItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCloseButton: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f1f1f1',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#29846A',
+    fontWeight: '500',
   },
 });
 

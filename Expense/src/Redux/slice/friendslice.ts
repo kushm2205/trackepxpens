@@ -100,9 +100,7 @@ export const addFriend = createAsyncThunk(
     }
   },
 );
-// Updated fetchFriends in friendslice.js
-// Updated fetchFriends in friendslice.js
-// Updated fetchFriends in friendslice.js
+
 export const fetchFriends = createAsyncThunk(
   'friends/fetchFriends',
   async (userId, {dispatch, rejectWithValue, getState}) => {

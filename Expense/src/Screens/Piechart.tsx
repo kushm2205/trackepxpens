@@ -33,34 +33,29 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
   const {userId: currentUserId} = useSelector((state: RootState) => state.auth);
   const screenWidth = Dimensions.get('window').width;
 
-  // Filter balances relevant to current user (owed or gets back)
   const userBalances = memberBalances
     .filter(member => member.memberId !== currentUserId)
     .map(member => {
-      // Negative balance means the user owes this member
-      // Positive balance means the member owes the user
-      const amount = member.balance * -1; // Invert to show from user's perspective
+      const amount = member.balance;
       return {
         ...member,
         amount: Math.abs(amount),
-        type: amount > 0 ? 'owed' : 'owes',
+        type: amount > 0 ? 'owes' : 'owed',
       };
     });
 
-  // Prepare chart data for user-specific balances (money owed/gets back)
   const userChartData = userBalances
-    .filter(member => member.amount > 0) // Only include non-zero balances
+    .filter(member => member.amount > 0)
     .map(member => ({
-      name: `${member.name} (${
+      name: `${member.name}  (${
         member.type === 'owed' ? 'owes you' : 'you owe'
       })`,
       amount: member.amount,
-      color: member.type === 'owed' ? '#4CAF50' : '#F44336', // Green for owed, red for owes
+      color: member.type === 'owed' ? '#4CAF50' : '#F44336',
       legendFontColor: '#7F7F7F',
       legendFontSize: 12,
     }));
 
-  // Calculate totals
   const totalOwed = userBalances
     .filter(m => m.type === 'owed')
     .reduce((sum, m) => sum + m.amount, 0);
@@ -73,7 +68,6 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>{groupName} Expense Distribution</Text>
 
-      {/* Net Balance Summary */}
       <View style={styles.summaryContainer}>
         <Text style={styles.summaryTitle}>Your Net Balance</Text>
         <Text
@@ -93,13 +87,12 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
         </Text>
       </View>
 
-      {/* User-specific Pie Chart */}
       {userChartData && userChartData.length > 0 ? (
         <View style={styles.chartContainer}>
           <Text style={styles.sectionTitle}>Your Settlement Status</Text>
           <PieChart
             data={userChartData}
-            width={screenWidth - 32}
+            width={screenWidth - 50}
             height={220}
             chartConfig={{
               backgroundColor: '#ffffff',
@@ -111,7 +104,6 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
             accessor="amount"
             backgroundColor="transparent"
             paddingLeft="15"
-            absolute
             hasLegend={true}
           />
         </View>
@@ -119,7 +111,6 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
         <Text style={styles.noDataText}>No personal balances to display</Text>
       )}
 
-      {/* Detailed Balances */}
       {userBalances.length > 0 && (
         <View style={styles.balancesContainer}>
           <Text style={styles.sectionTitle}>Detailed Balances</Text>
@@ -142,13 +133,12 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
         </View>
       )}
 
-      {/* Group Expense Distribution Pie Chart */}
       {chartData && chartData.length > 0 ? (
         <View style={styles.chartContainer}>
           <Text style={styles.sectionTitle}>Group Expense Distribution</Text>
           <PieChart
             data={chartData}
-            width={screenWidth - 32}
+            width={screenWidth - 50}
             height={220}
             chartConfig={{
               backgroundColor: '#ffffff',
@@ -168,7 +158,6 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
         <Text style={styles.noDataText}>No expense data available</Text>
       )}
 
-      {/* Summary statistics */}
       <View style={styles.statsContainer}>
         <Text style={styles.sectionTitle}>Summary</Text>
         <View style={styles.statItem}>
@@ -208,7 +197,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 16,
-    color: '#333',
+    color: '#29846A',
   },
   noDataText: {
     textAlign: 'center',
@@ -242,7 +231,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#333',
+    color: '#4CBB9C',
   },
   netBalance: {
     fontSize: 18,
@@ -262,7 +251,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginVertical: 8,
-    color: '#333',
+    color: '#4CBB9B',
   },
   balancesContainer: {
     backgroundColor: '#fff',

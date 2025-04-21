@@ -45,7 +45,6 @@ const ActivityScreen = () => {
         });
         setUserMap(userNameMap);
 
-        // Fetch all activity data in parallel
         const [groups, friends, expenses, friendExpenses, personal] =
           await Promise.all([
             getDocs(collection(db, 'groups')),
@@ -56,12 +55,10 @@ const ActivityScreen = () => {
           ]);
 
         const isUserInvolved = (data: any, type: string) => {
-          // For personal expenses, check if userId matches current user
           if (type === 'personal') {
             return data.userId === userId;
           }
 
-          // For other activity types
           if (
             data.createdBy === userId ||
             data.paidBy === userId ||
@@ -109,7 +106,6 @@ const ActivityScreen = () => {
             }
           }
 
-          // Format personal expense description
           let description = data.description || 'No description';
           if (type === 'personal' && data.category) {
             description = `${description} (${data.category})`;
@@ -207,12 +203,12 @@ const ActivityScreen = () => {
     switch (type) {
       case 'group':
       case 'groupExpense':
-        return {icon: 'account-group', color: '#4A90E2'};
+        return {icon: 'account-group', color: '#4bbc9b'};
       case 'friend':
       case 'friendExpense':
-        return {icon: 'account', color: '#7B61FF'};
-      case 'personal':
-        return {icon: 'wallet', color: '#E91E63'};
+        return {icon: 'account', color: '#069A03'};
+      case 'Personal':
+        return {icon: 'wallet', color: '#616161'};
       default:
         return {icon: 'alert-circle', color: '#9E9E9E'};
     }
@@ -369,10 +365,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   activeTabButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#29846A',
   },
   tabText: {
-    color: '#666',
+    color: 'grey',
     fontWeight: '500',
   },
   activeTabText: {
@@ -391,10 +387,10 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    color: '#666',
+    color: '#29846A',
   },
   infoText: {
-    color: '#666',
+    color: 'grey',
     fontSize: 16,
   },
   listContainer: {
@@ -412,7 +408,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   paidForMeCard: {
-    backgroundColor: '#f8fff8',
+    backgroundColor: '#22fff8',
     borderLeftWidth: 6,
   },
   row: {
@@ -435,7 +431,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   desc: {
-    color: '#333',
+    color: 'grey',
     fontSize: 14,
     marginBottom: 6,
   },
@@ -452,7 +448,7 @@ const styles = StyleSheet.create({
   },
   creator: {
     fontSize: 12,
-    color: '#666',
+    color: 'grey',
     marginRight: 8,
   },
   category: {
@@ -462,7 +458,7 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 12,
-    color: '#999',
+    color: 'grey',
   },
 });
 

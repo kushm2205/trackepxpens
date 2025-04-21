@@ -66,6 +66,7 @@ const EditFriendExpenss = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Text style={styles.Text}>Edit Expense</Text>
       <View style={styles.form}>
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -152,7 +153,7 @@ const EditFriendExpenss = () => {
 
         <View style={styles.buttonContainer}>
           <Pressable style={styles.updateButton} onPress={handleUpdate}>
-            <Text style={styles.buttonText}>Update Expense</Text>
+            <Text style={styles.updateText}>Update Expense</Text>
           </Pressable>
           <Pressable style={styles.deleteButton} onPress={handleDelete}>
             <Text style={styles.buttonText}>Delete Expense</Text>
@@ -166,29 +167,44 @@ const EditFriendExpenss = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
   },
   form: {
     flex: 1,
   },
+  Text: {
+    marginTop: 20,
+    fontSize: 20,
+    color: '#29846A',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
   label: {
+    paddingLeft: 20,
     fontSize: 16,
     marginBottom: 8,
-    fontWeight: 'bold',
+    color: '#4CBB9B',
+    fontWeight: '500',
   },
   input: {
+    marginLeft: 20,
+    marginRight: 20,
+    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    padding: 10,
+    borderColor: 'grey',
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 16,
     fontSize: 16,
   },
   radioGroup: {
+    marginLeft: 20,
+
     flexDirection: 'row',
     marginBottom: 16,
   },
   radioButton: {
+    marginLeft: 20,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 4,
@@ -196,8 +212,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   radioButtonSelected: {
-    backgroundColor: 'blue',
-    borderColor: 'blue',
+    backgroundColor: '#4BBC9B',
+    borderColor: 'grey',
   },
   radioButtonText: {
     fontSize: 16,
@@ -206,10 +222,12 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   checkboxGroup: {
+    marginLeft: 20,
     flexDirection: 'row',
     marginBottom: 24,
   },
   checkbox: {
+    marginLeft: 20,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 4,
@@ -217,8 +235,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxSelected: {
-    backgroundColor: 'blue',
-    borderColor: 'blue',
+    backgroundColor: '#4BBC9B',
+    borderColor: 'grey',
   },
   checkboxText: {
     fontSize: 16,
@@ -227,23 +245,33 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   buttonContainer: {
+    margin: 15,
     marginTop: 20,
   },
   updateButton: {
-    backgroundColor: 'blue',
-    padding: 15,
-    borderRadius: 4,
+    backgroundColor: '#4CBB9B',
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   deleteButton: {
-    backgroundColor: 'red',
-    padding: 15,
-    borderRadius: 4,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#4CBB9B',
   },
   buttonText: {
-    color: 'white',
+    color: '#ff3b30',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  updateText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },

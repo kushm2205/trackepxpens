@@ -179,14 +179,17 @@ const styles = StyleSheet.create({
   friendName: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#29846A',
   },
   label: {
     fontSize: 16,
     marginTop: 10,
+    color: '#4BBC9B',
+    fontWeight: '500',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: 'grey',
     padding: 10,
     marginTop: 5,
     borderRadius: 5,
@@ -202,18 +205,18 @@ const styles = StyleSheet.create({
   },
   splitOption: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#4BBC9B',
     padding: 10,
     borderRadius: 5,
   },
   selectedSplitOption: {
-    backgroundColor: 'lightblue',
+    backgroundColor: '#4BBC9B',
   },
   splitOptionText: {
     fontSize: 16,
   },
   addButton: {
-    backgroundColor: 'blue',
+    backgroundColor: '#4BBC9B',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -231,12 +234,12 @@ const styles = StyleSheet.create({
   },
   paidByOption: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: 'grey',
     padding: 10,
     borderRadius: 5,
   },
   selectedPaidByOption: {
-    backgroundColor: 'lightblue',
+    backgroundColor: '#4BBC9B',
   },
   paidByOptionText: {
     fontSize: 16,

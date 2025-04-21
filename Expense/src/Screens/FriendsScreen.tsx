@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -8,9 +7,10 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
 import {AppDispatch, RootState} from '../Redux/store';
 import {
@@ -18,6 +18,7 @@ import {
   selectFriends,
   selectFriendsLoading,
   removeFriend,
+  addFriend,
 } from '../Redux/slice/friendslice';
 import {Friend, RootStackParamList} from '../types/types';
 import {
@@ -30,8 +31,12 @@ import {
   where,
 } from 'firebase/firestore';
 import {db} from '../services/firebase';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
-import {RectButton} from 'react-native-gesture-handler';
+import {
+  GestureHandlerRootView,
+  Swipeable,
+  RectButton,
+} from 'react-native-gesture-handler';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type FriendScreenProp = StackNavigationProp<
   RootStackParamList,
@@ -43,12 +48,13 @@ const FriendsScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
   const friends = useSelector(selectFriends);
   const loading = useSelector(selectFriendsLoading);
+  const [loader, setLoader] = useState(false);
   const [totalBalance, setTotalBalance] = useState<number>(0);
-  const [friend, setFriend] = useState<number>(0);
   const {userId} = useSelector((state: RootState) => state.auth);
   const [friendBalances, setFriendBalances] = useState<Record<string, number>>(
     {},
   );
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   const handleAddExpense = (friend: Friend) => {
     navigation.navigate('AddFriendExpense', {friend});
@@ -58,17 +64,44 @@ const FriendsScreen = () => {
     navigation.navigate('ChatScreenFriend', {friend});
   };
 
-  const FriendRequest = () => {
+  const handleFriendRequest = () => {
     navigation.navigate('FriendRequest');
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      if (userId) {
-        dispatch(fetchFriends(userId));
-      }
-    }, [dispatch, userId]),
-  );
+  useEffect(() => {
+    if (userId) {
+      setLoader(true);
+      dispatch(fetchFriends(userId)).then(() => {
+        setLoader(false);
+      });
+    }
+  }, [dispatch, userId]);
+
+  const handleRetry = () => {
+    setRetryAttempt(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const unsubscribeFriends = onSnapshot(
+      query(collection(db, 'friends'), where('userId', '==', userId)),
+      snapshot => {
+        snapshot.docChanges().forEach(change => {
+          const friendData = change.doc.data() as Friend;
+
+          if (
+            change.type === 'added' &&
+            !friends.some(f => f.userId === friendData.userId)
+          ) {
+            dispatch(addFriend(friendData));
+          }
+        });
+      },
+    );
+
+    return () => unsubscribeFriends();
+  }, [userId, dispatch, friends]);
 
   useEffect(() => {
     if (!userId || friends.length === 0) return;
@@ -128,6 +161,7 @@ const FriendsScreen = () => {
       setTotalBalance(total);
     };
 
+    // Real-time listeners for expenses
     const unsubscribeFriendExpenses = onSnapshot(
       collection(db, 'friend_expenses'),
       snapshot => {
@@ -214,21 +248,25 @@ const FriendsScreen = () => {
 
   const renderLeftActions = (friend: Friend) => {
     return (
-      <RectButton
-        style={styles.chatButton}
-        onPress={() => handleNavigateToChat(friend)}>
-        <Text style={styles.chatButtonText}>Chat</Text>
-      </RectButton>
+      <View style={styles.leftActionContainer}>
+        <RectButton
+          style={[styles.leftAction, styles.chatAction]}
+          onPress={() => handleNavigateToChat(friend)}>
+          <Text style={styles.actionText}>Chat</Text>
+        </RectButton>
+      </View>
     );
   };
 
   const renderRightActions = (friend: Friend) => {
     return (
-      <RectButton
-        style={styles.deleteButton}
-        onPress={() => handleDeleteFriend(friend)}>
-        <Text style={styles.deleteButtonText}>Delete</Text>
-      </RectButton>
+      <View style={styles.rightActionContainer}>
+        <RectButton
+          style={[styles.rightAction, styles.deleteAction]}
+          onPress={() => handleDeleteFriend(friend)}>
+          <Text style={styles.actionText}>Delete</Text>
+        </RectButton>
+      </View>
     );
   };
 
@@ -238,100 +276,170 @@ const FriendsScreen = () => {
     const displayName = friendId === userId ? 'You' : item.name;
 
     return (
-      <Swipeable
-        renderLeftActions={() => renderLeftActions(item)}
-        renderRightActions={() => renderRightActions(item)}>
-        <Pressable onPress={() => handleAddExpense(item)}>
-          <View style={styles.friendItem}>
-            <Image
-              source={
-                item.photo
-                  ? {uri: item.photo}
-                  : require('../assets/download.png')
-              }
-              style={styles.friendImage}
-            />
-            <View style={styles.friendDetails}>
-              <Text style={styles.friendName}>{displayName}</Text>
-              <Text style={styles.friendPhone}>{item.phone}</Text>
-              <Text
-                style={[
-                  styles.friendBalance,
-                  {
-                    color: balance < 0 ? 'red' : balance > 0 ? 'green' : 'gray',
-                  },
-                ]}>
-                {balance === 0
-                  ? 'Settled up'
-                  : balance > 0
-                  ? `Owes you ₹${balance.toFixed(2)}`
-                  : `You owe ₹${Math.abs(balance).toFixed(2)}`}
-              </Text>
+      <GestureHandlerRootView>
+        <Swipeable
+          renderLeftActions={() => renderLeftActions(item)}
+          renderRightActions={() => renderRightActions(item)}
+          overshootRight={false}
+          overshootLeft={false}>
+          <TouchableOpacity onPress={() => handleAddExpense(item)}>
+            <View style={styles.friendItem}>
+              <Image
+                source={
+                  item.photo
+                    ? {uri: item.photo}
+                    : require('../assets/download.png')
+                }
+                style={styles.friendImage}
+              />
+              <View style={styles.friendDetails}>
+                <Text style={styles.friendName}>{displayName}</Text>
+                <Text style={styles.friendPhone}>{item.phone}</Text>
+                <Text
+                  style={[
+                    styles.friendBalance,
+                    {
+                      color:
+                        balance < 0 ? 'red' : balance > 0 ? 'green' : 'gray',
+                    },
+                  ]}>
+                  {balance === 0
+                    ? 'Settled up'
+                    : balance > 0
+                    ? `Owes you ₹${balance.toFixed(2)}`
+                    : `You owe ₹${Math.abs(balance).toFixed(2)}`}
+                </Text>
+              </View>
             </View>
-          </View>
-        </Pressable>
-      </Swipeable>
+          </TouchableOpacity>
+        </Swipeable>
+      </GestureHandlerRootView>
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.totalBalanceContainer}>
-        <Text style={styles.totalBalanceText}>Total Balance</Text>
-        <Text
-          style={[
-            styles.totalBalanceAmount,
-            {
-              color:
-                totalBalance < 0 ? 'red' : totalBalance > 0 ? 'green' : 'gray',
-            },
-          ]}>
-          {totalBalance === 0
-            ? 'Settled up'
-            : totalBalance > 0
-            ? `You are owed ₹${totalBalance.toFixed(2)}`
-            : `You owe ₹${Math.abs(totalBalance).toFixed(2)}`}
-        </Text>
+  const authState = useSelector((state: RootState) => state.auth);
+
+  if (authState.loading) {
+    return (
+      <View style={styles.authContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text style={styles.statusText}>Checking authentication...</Text>
       </View>
-      {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#0000ff"
-          style={{marginTop: 20}}
-        />
-      ) : (
-        <FlatList
-          data={friends}
-          keyExtractor={(item, index) =>
-            item.userId ?? item.phone ?? index.toString()
-          }
-          renderItem={renderFriend}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
+    );
+  }
+
+  if (!authState.isAuthenticated) {
+    return (
+      <View style={styles.authContainer}>
+        <Text style={styles.errorText}>Please log in to view your friends</Text>
+        <TouchableOpacity
+          style={styles.buttonStyle}
+          onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.buttonText}>Go to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <GestureHandlerRootView style={{flex: 1}}>
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>Friends</Text>
+        </View>
+
+        <View style={styles.totalBalanceContainer}>
+          <Text style={styles.totalBalanceText}>Total Balance</Text>
+          <Text
+            style={[
+              styles.totalBalanceAmount,
+              {
+                color:
+                  totalBalance < 0
+                    ? 'red'
+                    : totalBalance > 0
+                    ? 'green'
+                    : 'gray',
+              },
+            ]}>
+            {totalBalance === 0
+              ? 'Settled up'
+              : totalBalance > 0
+              ? `You are owed ₹${totalBalance.toFixed(2)}`
+              : `You owe ₹${Math.abs(totalBalance).toFixed(2)}`}
+          </Text>
+        </View>
+
+        {loader || loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4CBB9B" />
+            <Text style={styles.statusText}>Loading friends...</Text>
+          </View>
+        ) : null}
+
+        {!loading && !loader && (!friends || friends.length === 0) && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.statusText}>
               No friends found. Add some friends!
             </Text>
-          }
-        />
-      )}
+            <TouchableOpacity
+              style={styles.buttonStyle}
+              onPress={handleFriendRequest}>
+              <Text style={styles.buttonText}>Add a New Friend</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      <Pressable onPress={FriendRequest} style={styles.addButton}>
-        <Text style={styles.addButtonText}>Add a New Friend</Text>
-      </Pressable>
-    </View>
+        {!loading && !loader && friends && friends.length > 0 && (
+          <FlatList
+            data={friends}
+            keyExtractor={item =>
+              item.userId ?? item.phone ?? Math.random().toString()
+            }
+            renderItem={renderFriend}
+            style={styles.friendsList}
+            contentContainerStyle={styles.friendsListContent}
+          />
+        )}
+
+        <TouchableOpacity
+          style={styles.fabButton}
+          onPress={handleFriendRequest}>
+          <Ionicons name="add-circle-outline" size={30} color="white" />
+        </TouchableOpacity>
+      </View>
+    </GestureHandlerRootView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f7f7f7',
+    padding: 12,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  header: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
   },
   totalBalanceContainer: {
     padding: 20,
-    backgroundColor: '#f8f9fa',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginBottom: 15,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   totalBalanceText: {
     fontSize: 16,
@@ -342,44 +450,46 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  addButton: {
-    backgroundColor: '#007bff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 15,
-    margin: 10,
-    borderRadius: 10,
+  friendsList: {
+    flex: 1,
   },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  friendsListContent: {
+    paddingVertical: 5,
   },
   friendItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   friendImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    marginRight: 15,
     backgroundColor: '#ccc',
+    borderWidth: 0.5,
+    borderColor: 'grey',
   },
   friendDetails: {
     flex: 1,
   },
   friendName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
+    color: '#4CBB9B',
+    marginBottom: 5,
   },
   friendPhone: {
     fontSize: 14,
-    color: '#555',
+    color: '#666',
     marginTop: 2,
   },
   friendBalance: {
@@ -393,27 +503,86 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#777',
   },
-  deleteButton: {
-    backgroundColor: 'red',
-    justifyContent: 'center',
-    alignItems: 'center',
+  rightActionContainer: {
     width: 80,
-    height: '100%',
+    flexDirection: 'row',
   },
-  deleteButtonText: {
+  leftActionContainer: {
+    width: 80,
+    flexDirection: 'row',
+  },
+  rightAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 80,
+  },
+  leftAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 80,
+  },
+  deleteAction: {
+    backgroundColor: '#3c7d75',
+  },
+  chatAction: {
+    backgroundColor: '#4CBB9B',
+  },
+  actionText: {
     color: 'white',
     fontWeight: 'bold',
+    padding: 10,
   },
-  chatButton: {
-    backgroundColor: '#007bff',
+  fabButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#4CBB9B',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 80,
-    height: '100%',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
   },
-  chatButtonText: {
+  authContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusText: {
+    textAlign: 'center',
+    marginVertical: 10,
+    color: '#666',
+  },
+  errorText: {
+    textAlign: 'center',
+    marginVertical: 10,
+    color: 'red',
+  },
+  buttonStyle: {
+    backgroundColor: '#4CBB9B',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  buttonText: {
     color: 'white',
     fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
