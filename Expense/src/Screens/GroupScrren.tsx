@@ -247,7 +247,8 @@ const GroupScreen = () => {
         <TouchableOpacity
           style={styles.fabButton}
           onPress={handleCreateGroupPress}>
-          <Ionicons name="add-circle-outline" size={30} color="grey" />
+          <Ionicons name="add-circle-outline" size={30} color="white" />
+          <Text style={styles.Create}>Create Group</Text>
         </TouchableOpacity>
       </View>
     </GestureHandlerRootView>
@@ -373,11 +374,12 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   fabButton: {
+    flexDirection: 'row',
     position: 'absolute',
     right: 20,
     bottom: 20,
     backgroundColor: '#4CBB9B',
-    width: 56,
+    width: 140,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
@@ -387,6 +389,10 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.3,
     shadowRadius: 3,
+  },
+  Create: {
+    marginLeft: 4,
+    color: 'white',
   },
   buttonStyle: {
     backgroundColor: '#007AFF',

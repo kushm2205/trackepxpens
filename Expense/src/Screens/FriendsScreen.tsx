@@ -161,7 +161,6 @@ const FriendsScreen = () => {
       setTotalBalance(total);
     };
 
-    // Real-time listeners for expenses
     const unsubscribeFriendExpenses = onSnapshot(
       collection(db, 'friend_expenses'),
       snapshot => {
@@ -406,6 +405,7 @@ const FriendsScreen = () => {
           style={styles.fabButton}
           onPress={handleFriendRequest}>
           <Ionicons name="add-circle-outline" size={30} color="white" />
+          <Text style={styles.AddText}>Add Friend</Text>
         </TouchableOpacity>
       </View>
     </GestureHandlerRootView>
@@ -455,6 +455,10 @@ const styles = StyleSheet.create({
   },
   friendsListContent: {
     paddingVertical: 5,
+  },
+  AddText: {
+    color: 'white',
+    marginLeft: 4,
   },
   friendItem: {
     flexDirection: 'row',
@@ -533,11 +537,12 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   fabButton: {
+    flexDirection: 'row',
     position: 'absolute',
     right: 20,
     bottom: 20,
     backgroundColor: '#4CBB9B',
-    width: 56,
+    width: 120,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',

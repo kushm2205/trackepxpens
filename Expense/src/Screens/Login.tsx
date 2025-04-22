@@ -41,7 +41,6 @@ const Login: React.FC = () => {
     otp: '',
   });
 
-  // Validation function
   const validateForm = () => {
     let isValid = true;
     const newErrors = {

@@ -1,17 +1,18 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
   View,
   TextInput,
-  Button,
+  Modal,
   Image,
   TouchableOpacity,
   Alert,
   StyleSheet,
   Text,
   ScrollView,
-  Platform,
+  Animated,
   KeyboardAvoidingView,
   Switch,
+  Platform,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {RootState, AppDispatch} from '../Redux/store';
@@ -34,25 +35,21 @@ const AccountScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<AccountScreenNavigationProp>();
   const {userId} = useSelector((state: RootState) => state.auth);
+  const modalAnimation = useRef(new Animated.Value(0)).current;
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
-
-  // Bank details
-  const [bankName, setBankName] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [ifscCode, setIfscCode] = useState('');
-  const [accountType, setAccountType] = useState('Savings');
-  const [showAccountNumber, setShowAccountNumber] = useState(false);
-
-  // Terms and conditions
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Section visibility
-  const [showPersonalDetails, setShowPersonalDetails] = useState(true);
-  const [showBankDetails, setShowBankDetails] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [currentField, setCurrentField] = useState<
+    'name' | 'email' | 'phone' | null
+  >(null);
 
   useEffect(() => {
     if (userId) {
@@ -60,23 +57,32 @@ const AccountScreen: React.FC = () => {
     }
   }, [userId]);
 
+  useEffect(() => {
+    if (isModalVisible) {
+      Animated.timing(modalAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(modalAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isModalVisible]);
+
   const fetchUserData = async () => {
     if (!userId) return;
 
     try {
       const userData = await getUser(userId);
       if (userData) {
-        // Personal details
         setName(userData.name ?? '');
         setEmail(userData.email ?? '');
         setPhotoURL(userData.profilePicture ?? null);
         setPhone(userData.phone ?? '');
-
-        // Bank details
-        setBankName(userData.bankName ?? '');
-        setAccountNumber(userData.accountNumber ?? '');
-        setIfscCode(userData.ifscCode ?? '');
-        setAccountType(userData.accountType ?? '');
         setTermsAccepted(userData.termsAccepted ?? false);
       }
     } catch (error) {
@@ -96,6 +102,24 @@ const AccountScreen: React.FC = () => {
           const asset = response.assets[0];
           if (asset.uri) {
             setPhotoURL(asset.uri);
+            try {
+              if (userId) {
+                const uploadResult = await uploadImage(asset.uri, userId);
+                if (uploadResult) {
+                  setPhotoURL(uploadResult.cloudinaryUrl);
+                  await updateUser(userId, {
+                    profilePicture: uploadResult.cloudinaryUrl,
+                  });
+                  await AsyncStorage.setItem(
+                    'profilePicture',
+                    uploadResult.cloudinaryUrl,
+                  );
+                }
+              }
+            } catch (error) {
+              console.error('Error uploading image:', error);
+              Alert.alert('Error', 'Failed to upload profile picture.');
+            }
           }
         }
       });
@@ -104,56 +128,86 @@ const AccountScreen: React.FC = () => {
     }
   };
 
+  const openEditModal = (field: 'name' | 'email' | 'phone') => {
+    setCurrentField(field);
+    switch (field) {
+      case 'name':
+        setEditName(name);
+        break;
+      case 'email':
+        setEditEmail(email);
+        break;
+      case 'phone':
+        setEditPhone(phone);
+        break;
+    }
+    setIsModalVisible(true);
+  };
+
+  const saveFieldEdit = async () => {
+    if (!userId || !currentField) return;
+
+    let updatedValue = '';
+    switch (currentField) {
+      case 'name':
+        if (!editName.trim()) {
+          Alert.alert('Error', 'Name cannot be empty');
+          return;
+        }
+        updatedValue = editName;
+        setName(editName);
+        break;
+      case 'email':
+        if (!editEmail.trim() || !editEmail.includes('@')) {
+          Alert.alert('Error', 'Please enter a valid email');
+          return;
+        }
+        updatedValue = editEmail;
+        setEmail(editEmail);
+        break;
+      case 'phone':
+        if (!editPhone.trim()) {
+          Alert.alert('Error', 'Phone number cannot be empty');
+          return;
+        }
+        updatedValue = editPhone;
+        setPhone(editPhone);
+        break;
+    }
+
+    try {
+      const updateObj = {[currentField]: updatedValue};
+      await updateUser(userId, updateObj);
+
+      if (currentField === 'email') {
+        dispatch(login({userId, email: updatedValue, photoURL}));
+      }
+
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error('Error updating field:', error);
+    }
+  };
+
   const handleUpdateProfile = async () => {
     if (!userId) return;
 
-    // Basic validation
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter your name');
       return;
     }
 
-    if (
-      showBankDetails &&
-      (!bankName.trim() || !accountNumber.trim() || !ifscCode.trim())
-    ) {
-      Alert.alert('Error', 'Please fill all bank details');
-      return;
-    }
-
-    if (!termsAccepted) {
-      Alert.alert('Error', 'Please accept the terms and conditions');
-      return;
-    }
-
     try {
-      let uploadedPhotoURL = photoURL;
-
-      if (photoURL && photoURL.startsWith('file://')) {
-        const uploadResult = await uploadImage(photoURL, userId);
-
-        if (!uploadResult) {
-          Alert.alert('Upload Failed', 'Image upload was unsuccessful.');
-          return;
-        }
-        uploadedPhotoURL = uploadResult.cloudinaryUrl;
-        setPhotoURL(uploadedPhotoURL);
-      }
-
       await updateUser(userId, {
         name,
         email,
         phone,
-        profilePicture: uploadedPhotoURL ?? '',
-        bankName,
-        accountNumber,
-        ifscCode,
-        accountType,
+        profilePicture: photoURL ?? '',
         termsAccepted,
       });
 
-      dispatch(login({userId, email, photoURL: uploadedPhotoURL}));
-      await AsyncStorage.setItem('profilePicture', uploadedPhotoURL ?? '');
+      dispatch(login({userId, email, photoURL}));
+      await AsyncStorage.setItem('profilePicture', photoURL ?? '');
 
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
@@ -166,29 +220,106 @@ const AccountScreen: React.FC = () => {
       await signOut(auth);
       await AsyncStorage.clear();
       dispatch(logout());
-      // navigation.reset({index: 0, routes: [{name: 'Login'}]});
     } catch (error) {
       console.error('Logout Error:', error);
     }
   };
 
-  const toggleAccountNumberVisibility = () => {
-    setShowAccountNumber(!showAccountNumber);
+  const renderEditModal = () => {
+    return (
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setIsModalVisible(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay}>
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                transform: [
+                  {
+                    translateY: modalAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [600, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Edit{' '}
+                {currentField
+                  ? currentField.charAt(0).toUpperCase() + currentField.slice(1)
+                  : ''}
+              </Text>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalContent}>
+              {currentField === 'name' && (
+                <TextInput
+                  style={styles.modalInput}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Enter your name"
+                  autoFocus
+                />
+              )}
+
+              {currentField === 'email' && (
+                <TextInput
+                  style={styles.modalInput}
+                  value={editEmail}
+                  onChangeText={setEditEmail}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoFocus
+                />
+              )}
+
+              {currentField === 'phone' && (
+                <TextInput
+                  style={styles.modalInput}
+                  value={editPhone}
+                  onChangeText={setEditPhone}
+                  placeholder="Enter your phone number"
+                  keyboardType="phone-pad"
+                  autoFocus
+                />
+              )}
+
+              <View style={styles.modalButtonsContainer}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setIsModalVisible(false)}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={saveFieldEdit}>
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </Modal>
+    );
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}>
+    <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>My Account</Text>
+          <Text style={styles.title}>Your Account</Text>
         </View>
 
-        {/* Profile Section */}
         <View style={styles.profileSection}>
           <TouchableOpacity
             onPress={pickImage}
@@ -207,175 +338,40 @@ const AccountScreen: React.FC = () => {
           <Text style={styles.userEmail}>{email || 'email@example.com'}</Text>
         </View>
 
-        {/* Section Tabs */}
-        <View style={styles.tabContainer}>
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+
           <TouchableOpacity
-            style={[styles.tab, showPersonalDetails && styles.activeTab]}
-            onPress={() => {
-              setShowPersonalDetails(true);
-              setShowBankDetails(false);
-            }}>
-            <Text
-              style={[
-                styles.tabText,
-                showPersonalDetails && styles.activeTabText,
-              ]}>
-              Personal Details
-            </Text>
+            style={styles.fieldContainer}
+            onPress={() => openEditModal('name')}>
+            <View style={styles.fieldLabelContainer}>
+              <Text style={styles.fieldLabel}>Full Name</Text>
+              <Text style={styles.fieldValue}>{name || 'Not set'}</Text>
+            </View>
+            <Text style={styles.editIcon}>✏️</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={[styles.tab, showBankDetails && styles.activeTab]}
-            onPress={() => {
-              setShowPersonalDetails(false);
-              setShowBankDetails(true);
-            }}>
-            <Text
-              style={[styles.tabText, showBankDetails && styles.activeTabText]}>
-              Bank Details
-            </Text>
+            style={styles.fieldContainer}
+            onPress={() => openEditModal('email')}>
+            <View style={styles.fieldLabelContainer}>
+              <Text style={styles.fieldLabel}>Email Address</Text>
+              <Text style={styles.fieldValue}>{email || 'Not set'}</Text>
+            </View>
+            <Text style={styles.editIcon}>✏️</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.fieldContainer}
+            onPress={() => openEditModal('phone')}>
+            <View style={styles.fieldLabelContainer}>
+              <Text style={styles.fieldLabel}>Phone Number</Text>
+              <Text style={styles.fieldValue}>{phone || 'Not set'}</Text>
+            </View>
+            <Text style={styles.editIcon}>✏️</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Personal Details Section */}
-        {showPersonalDetails && (
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your full name"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email"
-                keyboardType="email-address"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Enter your phone number"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Bank Details Section */}
-        {showBankDetails && (
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Bank Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Bank Name</Text>
-              <TextInput
-                style={styles.input}
-                value={bankName}
-                onChangeText={setBankName}
-                placeholder="Enter your bank name"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Account Number</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={accountNumber}
-                  onChangeText={setAccountNumber}
-                  placeholder="Enter account number"
-                  keyboardType="numeric"
-                  secureTextEntry={!showAccountNumber}
-                />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={toggleAccountNumberVisibility}>
-                  <Text style={styles.eyeIconText}>
-                    {showAccountNumber ? '👁️' : '👁️‍🗨️'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>IFSC Code</Text>
-              <TextInput
-                style={styles.input}
-                value={ifscCode}
-                onChangeText={setIfscCode}
-                placeholder="Enter IFSC code"
-                autoCapitalize="characters"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Account Type</Text>
-              <View style={styles.accountTypeContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.accountTypeButton,
-                    accountType === 'Savings' && styles.selectedAccountType,
-                  ]}
-                  onPress={() => setAccountType('Savings')}>
-                  <Text
-                    style={[
-                      styles.accountTypeText,
-                      accountType === 'Savings' &&
-                        styles.selectedAccountTypeText,
-                    ]}>
-                    Savings
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.accountTypeButton,
-                    accountType === 'Current' && styles.selectedAccountType,
-                  ]}
-                  onPress={() => setAccountType('Current')}>
-                  <Text
-                    style={[
-                      styles.accountTypeText,
-                      accountType === 'Current' &&
-                        styles.selectedAccountTypeText,
-                    ]}>
-                    Current
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Terms and Conditions */}
-        <View style={styles.termsContainer}>
-          <View style={styles.termsRow}>
-            <Switch
-              value={termsAccepted}
-              onValueChange={setTermsAccepted}
-              trackColor={{false: '#d3d3d3', true: '#4CAF50'}}
-              thumbColor={termsAccepted ? '#ffffff' : '#f4f3f4'}
-            />
-            <Text style={styles.termsText}>
-              I accept the terms and conditions
-            </Text>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.updateButton}
@@ -387,7 +383,6 @@ const AccountScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Copyright/Terms Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             © 2025 YourAppName. All rights reserved. By using this app, you
@@ -395,7 +390,9 @@ const AccountScreen: React.FC = () => {
           </Text>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {renderEditModal()}
+    </View>
   );
 };
 
@@ -410,86 +407,73 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
   header: {
-    padding: 20,
-    backgroundColor: '#4a90e2',
+    borderRadius: 0,
+    padding: 16,
+    backgroundColor: '#29846A',
     alignItems: 'center',
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff',
   },
   profileSection: {
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginTop: 10,
     alignItems: 'center',
-    padding: 20,
+    padding: 30,
     backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderRadius: 15,
+    marginHorizontal: 15,
   },
   profileImageContainer: {
     position: 'relative',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: '#4a90e2',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: '#29846A',
   },
   cameraIconContainer: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#4a90e2',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#29846A',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
   cameraIcon: {
-    fontSize: 16,
+    fontSize: 18,
+    color: 'white',
   },
   userName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     marginTop: 10,
     color: '#333333',
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666666',
     marginTop: 5,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#ffffff',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#4a90e2',
-  },
-  tabText: {
-    fontSize: 16,
-    color: '#777777',
-  },
-  activeTabText: {
-    color: '#4a90e2',
-    fontWeight: 'bold',
   },
   formSection: {
     padding: 20,
     backgroundColor: '#ffffff',
-    marginTop: 10,
-    borderRadius: 10,
+    marginTop: 20,
+    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
@@ -498,77 +482,44 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333333',
-  },
-  inputGroup: {
-    marginBottom: 15,
-  },
-  inputLabel: {
-    fontSize: 14,
-    marginBottom: 8,
-    color: '#555555',
-    fontWeight: '500',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#dddddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#dddddd',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    alignItems: 'center',
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 10,
-  },
-  eyeIconText: {
     fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 25,
+    color: '#333333',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
+    paddingBottom: 10,
   },
-  accountTypeContainer: {
+  fieldContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  accountTypeButton: {
-    flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#dddddd',
-    borderRadius: 8,
     alignItems: 'center',
-    marginHorizontal: 5,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
   },
-  selectedAccountType: {
-    backgroundColor: '#4a90e2',
-    borderColor: '#4a90e2',
+  fieldLabelContainer: {
+    flex: 1,
   },
-  accountTypeText: {
+  fieldLabel: {
     fontSize: 16,
     color: '#555555',
+    fontWeight: '500',
+    marginBottom: 5,
   },
-  selectedAccountTypeText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+  fieldValue: {
+    fontSize: 16,
+    color: '#333333',
+  },
+  editIcon: {
+    fontSize: 18,
+    marginLeft: 10,
   },
   termsContainer: {
     padding: 20,
     backgroundColor: '#ffffff',
-    marginTop: 10,
-    borderRadius: 10,
+    marginTop: 20,
+    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
@@ -582,46 +533,121 @@ const styles = StyleSheet.create({
   },
   termsText: {
     marginLeft: 10,
-    fontSize: 14,
+    fontSize: 16,
     color: '#555555',
   },
   buttonContainer: {
     flexDirection: 'column',
     padding: 20,
     marginHorizontal: 15,
+    marginTop: 20,
   },
   updateButton: {
-    backgroundColor: '#4a90e2',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#29846A',
+    padding: 16,
+    borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
+    elevation: 2,
   },
   updateButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   logoutButton: {
     backgroundColor: '#ff6b6b',
-    padding: 15,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 10,
     alignItems: 'center',
+    elevation: 2,
   },
   logoutButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   footer: {
-    marginTop: 20,
+    marginTop: 30,
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   footerText: {
     fontSize: 12,
     color: '#888888',
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: '30%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
+    paddingBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  closeButton: {
+    fontSize: 22,
+    color: '#666666',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#dddddd',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 20,
+  },
+  modalButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginRight: 10,
+    backgroundColor: '#f2f2f2',
+  },
+  cancelButtonText: {
+    color: '#555555',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  saveButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: '#29846A',
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

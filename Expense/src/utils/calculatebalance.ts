@@ -1,3 +1,11 @@
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+} from '@react-native-firebase/firestore';
+import {db} from '../services/firebase';
+
 export const calculateFriendBalance = async (
   userId: string,
   friendId: string,
@@ -5,7 +13,6 @@ export const calculateFriendBalance = async (
   let balance = 0;
 
   try {
-    // Get all group expenses where user is involved
     const groupExpensesSnap = await getDocs(
       query(
         collection(db, 'expenses'),
@@ -13,7 +20,7 @@ export const calculateFriendBalance = async (
       ),
     );
 
-    groupExpensesSnap.forEach(docSnap => {
+    groupExpensesSnap.forEach((docSnap: {data: () => any}) => {
       const expense = docSnap.data();
       const isFriendInvolved = expense.splitBetween.includes(friendId);
       if (isFriendInvolved) {
@@ -26,7 +33,6 @@ export const calculateFriendBalance = async (
       }
     });
 
-    // Get friend expenses (1-to-1)
     const friendExpensesSnap = await getDocs(
       query(
         collection(db, 'friend_expenses'),
@@ -34,7 +40,7 @@ export const calculateFriendBalance = async (
       ),
     );
 
-    friendExpensesSnap.forEach(docSnap => {
+    friendExpensesSnap.forEach((docSnap: {data: () => any}) => {
       const expense = docSnap.data();
       if (expense.paidBy === userId) {
         balance += expense.amount / expense.splitBetween.length;

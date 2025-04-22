@@ -6,6 +6,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Platform,
+  StatusBar,
+  SafeAreaView,
 } from 'react-native';
 import {collection, getDocs} from 'firebase/firestore';
 import {useSelector} from 'react-redux';
@@ -207,7 +210,7 @@ const ActivityScreen = () => {
       case 'friend':
       case 'friendExpense':
         return {icon: 'account', color: '#069A03'};
-      case 'Personal':
+      case 'personal':
         return {icon: 'wallet', color: '#616161'};
       default:
         return {icon: 'alert-circle', color: '#9E9E9E'};
@@ -286,7 +289,8 @@ const ActivityScreen = () => {
   const renderTabButton = (tab: ActivityTab, label: string) => (
     <TouchableOpacity
       style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
-      onPress={() => setActiveTab(tab)}>
+      onPress={() => setActiveTab(tab)}
+      activeOpacity={0.7}>
       <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
         {label}
       </Text>
@@ -314,14 +318,17 @@ const ActivityScreen = () => {
   if (dataLoading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size="large" color="#4BBC9B" />
         <Text style={styles.loadingText}>Loading your activities...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.header}>Activity</Text>
+      </View>
       <View style={styles.tabContainer}>
         {renderTabButton('all', 'All')}
         {renderTabButton('personal', 'Personal')}
@@ -343,122 +350,146 @@ const ActivityScreen = () => {
           contentContainerStyle={styles.listContainer}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f9f9f9',
   },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 10,
-    backgroundColor: '#f8f8f8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    backgroundColor: '#ffffff',
+    borderBottomColor: '#e0e0e0',
+    zIndex: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    marginLeft: 12,
+    marginRight: 12,
+    borderRadius: 10,
   },
   tabButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 20,
+    marginHorizontal: 5,
+    backgroundColor: '#f0f0f0',
+    marginLeft: 5,
   },
   activeTabButton: {
     backgroundColor: '#29846A',
   },
   tabText: {
-    color: 'grey',
-    fontWeight: '500',
+    color: '#555',
+    fontSize: 14,
+    fontWeight: '600',
   },
   activeTabText: {
-    color: 'white',
-    fontWeight: '600',
+    color: '#ffffff',
   },
   loader: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-  },
-  authMessage: {
-    fontSize: 16,
-    color: '#666',
   },
   loadingText: {
     marginTop: 10,
-    color: '#29846A',
+    fontSize: 16,
+    color: '#4BBC9B',
+  },
+  authMessage: {
+    fontSize: 16,
+    color: '#444',
   },
   infoText: {
-    color: 'grey',
     fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  header: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    padding: 12,
   },
   listContainer: {
-    padding: 16,
+    padding: 10,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 8,
     padding: 16,
-    marginBottom: 12,
+    marginVertical: 6,
+    borderRadius: 10,
     borderLeftWidth: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   paidForMeCard: {
-    backgroundColor: '#22fff8',
-    borderLeftWidth: 6,
+    backgroundColor: '#e8f7f0',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
   typeContainer: {
-    flex: 1,
-    marginLeft: 8,
+    marginLeft: 10,
   },
   type: {
-    fontWeight: '600',
     fontSize: 16,
+    fontWeight: 'bold',
   },
   paidForMeText: {
     fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
-    marginTop: 2,
+    color: '#3bb0de',
+    fontWeight: 'bold',
   },
   desc: {
-    color: 'grey',
-    fontSize: 14,
-    marginBottom: 6,
+    marginTop: 8,
+    fontSize: 15,
+    color: '#333',
   },
   amount: {
-    fontWeight: 'bold',
+    marginTop: 4,
     fontSize: 16,
-    marginBottom: 8,
+    fontWeight: 'bold',
   },
   footer: {
+    marginTop: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   creator: {
-    fontSize: 12,
+    fontSize: 13,
     color: 'grey',
-    marginRight: 8,
   },
   category: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#999',
   },
   time: {
     fontSize: 12,
     color: 'grey',
+    marginTop: 4,
   },
 });
 

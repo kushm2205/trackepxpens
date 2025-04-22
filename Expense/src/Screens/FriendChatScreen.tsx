@@ -25,8 +25,9 @@ import {db} from '../services/firebase';
 import {useSelector} from 'react-redux';
 import {RootState} from '../Redux/store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {RouteProp, useRoute} from '@react-navigation/native';
+import {RouteProp, useRoute, useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../types/types';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type ChatScreenFriendRouteProp = RouteProp<
   RootStackParamList,
@@ -43,6 +44,7 @@ interface Message {
 }
 
 const ChatScreenFriend = () => {
+  const navigation = useNavigation();
   const route = useRoute<ChatScreenFriendRouteProp>();
   const {friend} = route.params;
   const authState = useSelector((state: RootState) => state.auth);
@@ -134,9 +136,13 @@ const ChatScreenFriend = () => {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.inner}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
         <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
           <Image
             source={
               friend.photo
@@ -240,6 +246,9 @@ const styles = StyleSheet.create({
     padding: 8,
     borderTopWidth: 1,
     borderTopColor: '#ddd',
+  },
+  backButton: {
+    padding: 8,
   },
   input: {
     flex: 1,

@@ -131,7 +131,6 @@ const ChatScreen = ({route}: any) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
         <View style={styles.header}>

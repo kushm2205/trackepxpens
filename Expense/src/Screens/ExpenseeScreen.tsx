@@ -22,7 +22,8 @@ import {
 import {addExpense, db} from '../services/firestore';
 import {RootStackParamList} from '../types/types';
 import {addDoc, collection, serverTimestamp} from 'firebase/firestore';
-
+import {getFCMToken} from '../services/firebase';
+import {getFunctions, httpsCallable} from 'firebase/functions';
 type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
 type AddExpenseScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -97,6 +98,18 @@ const AddExpenseScreen: React.FC = () => {
         splitBetween,
         description,
       );
+      const functions = getFunctions();
+      const sendNotification = httpsCallable(functions, 'sendNotification');
+      const payerName = memberNames[paidBy] || 'Someone';
+
+      // Send to all members except the payer
+      const recipients = splitBetween.filter(id => id !== paidBy);
+
+      await sendNotification({
+        recipientIds: recipients,
+        title: 'New Expense Added',
+        body: `${payerName} added a new expense: ${description} for ₹${amount}`,
+      });
 
       dispatch(
         addExpenseTransaction({

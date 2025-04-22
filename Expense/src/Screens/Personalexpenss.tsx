@@ -1,4 +1,3 @@
-// src/screens/PersonalExpensesScreen.tsx
 import React, {useEffect} from 'react';
 import {
   View,
@@ -18,13 +17,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
-// Define your navigation parameter list type
 type RootStackParamList = {
   AddPersonalExpense: undefined;
-  // Add other screens as needed
 };
 
-// Define the navigation prop type
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const PersonalExpensesScreen: React.FC = () => {
@@ -51,16 +47,11 @@ const PersonalExpensesScreen: React.FC = () => {
     }
 
     try {
-      // Check if it's a Firestore Timestamp
       if (timestamp.toDate && typeof timestamp.toDate === 'function') {
         return timestamp.toDate().toLocaleDateString();
-      }
-      // Check if it's a JavaScript Date
-      else if (timestamp instanceof Date) {
+      } else if (timestamp instanceof Date) {
         return timestamp.toLocaleDateString();
-      }
-      // Handle string representation of date
-      else if (typeof timestamp === 'string') {
+      } else if (typeof timestamp === 'string') {
         return new Date(timestamp).toLocaleDateString();
       }
       return 'N/A';
@@ -73,7 +64,7 @@ const PersonalExpensesScreen: React.FC = () => {
   if (loading && expenses.length === 0) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#4BBC9B" />
       </View>
     );
   }
@@ -187,6 +178,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
+    margin: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4BBC9B',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   addFirstButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4BBC9B',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#666',
+    color: 'grey',
     marginTop: 4,
   },
   expenseDetails: {
@@ -275,17 +276,17 @@ const styles = StyleSheet.create({
   expenseDescription: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: '#3bb0de',
   },
   expenseDate: {
     fontSize: 12,
-    color: '#999',
+    color: 'grey',
     marginTop: 4,
   },
   expenseAmount: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#4BBC9B',
   },
 });
 

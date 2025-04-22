@@ -197,3 +197,29 @@ export type EditExpenseRouteProp = {
 export type FriendExpenseListRouteProp = {
   friend: Friend;
 };
+// types/notificationTypes.ts
+export type NotificationType = {
+  id?: string;
+  title: string;
+  body: string;
+  data?: {
+    type: 'expense' | 'settlement' | 'group';
+    groupId?: string;
+    expenseId?: string;
+  };
+  read: boolean;
+  userId: string;
+  createdAt: Date | string;
+};
+
+export type PushNotificationPayload = {
+  notification: {
+    title: string;
+    body: string;
+  };
+  data?: {
+    type: string;
+    groupId?: string;
+    expenseId?: string;
+  };
+};

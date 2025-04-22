@@ -23,7 +23,6 @@ export const loadAuthState = createAsyncThunk(
           userId,
           email,
           photoURL,
-
           isAuthenticated: true,
         };
       }
@@ -45,6 +44,7 @@ export const loadAuthState = createAsyncThunk(
   },
 );
 
+// Save auth state to AsyncStorage
 const saveAuthData = async (
   userId: string | null,
   email: string | null,
@@ -108,6 +108,7 @@ const authSlice = createSlice({
         action.payload.photoURL,
       );
     },
+
     logout: state => {
       // Clear state
       state.userId = null;
@@ -121,7 +122,7 @@ const authSlice = createSlice({
     updateProfile: (state, action) => {
       if (action.payload.photoURL) {
         state.photoURL = action.payload.photoURL;
-
+        // Only update the photoURL in AsyncStorage
         AsyncStorage.setItem('profilePicture', action.payload.photoURL);
       }
     },

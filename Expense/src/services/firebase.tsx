@@ -1,4 +1,4 @@
-import {Platform} from 'react-native';
+import {Alert, Platform} from 'react-native';
 import {initializeApp, getApps} from 'firebase/app';
 import {
   getAuth,
@@ -40,15 +40,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
-enableIndexedDbPersistence(db).catch(err => {
-  if (err.code === 'failed-precondition') {
-    // Multiple tabs open, persistence can only be enabled in one tab at a time
-    console.log('Persistence failed: Multiple tabs open');
-  } else if (err.code === 'unimplemented') {
-    // The current browser doesn't support persistence
-    console.log('Persistence not supported by browser');
-  }
-});
+
 export {
   auth,
   db,

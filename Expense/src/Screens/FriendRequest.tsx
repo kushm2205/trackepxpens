@@ -24,6 +24,7 @@ import {
 import {db} from '../services/firestore';
 import {RootState} from '../Redux/store';
 import {useSelector} from 'react-redux';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const FriendRequestScreen = ({navigation}: any) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -208,11 +209,26 @@ const FriendRequestScreen = ({navigation}: any) => {
           marginBottom: 20,
         }}
       />
-      <FlatList
+      {/* <FlatList
         data={contactResults}
         keyExtractor={item => item.phone || item.userId}
         renderItem={renderContact}
-      />
+      /> */}
+      {contactResults.length === 0 ? (
+        <View style={{alignItems: 'center', marginTop: 50}}>
+          <Ionicons name="search-outline" size={80} color="gray" />
+          <Text style={{marginTop: 10, fontSize: 16, color: 'gray'}}>
+            No contacts found
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={contactResults}
+          keyExtractor={item => item.phone || item.userId}
+          renderItem={renderContact}
+        />
+      )}
+
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={{marginTop: 20, alignItems: 'center'}}>

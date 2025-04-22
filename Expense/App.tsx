@@ -32,6 +32,7 @@ import PieChartScreen from './src/Screens/Piechart';
 import PiChartFriend from './src/Screens/PieChartFriend';
 import ChatScreen from './src/Screens/chatscreengroup';
 import ChatScreenFriend from './src/Screens/FriendChatScreen';
+import ActivityScreen from './src/Screens/ActivityScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -82,7 +83,7 @@ const AppStack = () => (
     <Stack.Screen
       name="ChatScreenFriend"
       component={ChatScreenFriend}
-      options={{title: 'Chat'}}
+      options={{title: 'Chat', headerShown: false}}
     />
     <Stack.Screen
       name="FriendExpenseDetails"
@@ -91,6 +92,7 @@ const AppStack = () => (
     <Stack.Screen
       name="AddPersonalExpense"
       component={AddPersonalExpenseScreen}
+      options={{headerShown: false}}
     />
     <Stack.Screen
       name="PersonalExpensesScreen"

@@ -324,7 +324,6 @@ export const deleteGroup = createAsyncThunk<
   }
 });
 
-// Add proper type definition for GroupState
 interface GroupState {
   groups: group[];
   selectedMembers: string[];

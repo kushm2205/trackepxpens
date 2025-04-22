@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#29846A',
   },
   formContainer: {
     padding: 16,
@@ -238,13 +238,13 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#4BBC9B',
     marginRight: 4,
   },
   amountInput: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'grey',
     minWidth: 100,
     textAlign: 'center',
   },
@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: 'bold',
+    color: '#4BBC9B',
     marginBottom: 8,
   },
   textInput: {
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: 'grey',
   },
   categoryIcon: {
     width: 36,
@@ -290,7 +290,8 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#333',
+    color: '#4bbc9b',
+    fontWeight: '600',
     marginTop: 4,
   },
   datePickerButton: {
@@ -300,15 +301,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: 'gry',
   },
   dateText: {
     fontSize: 16,
-    color: '#333',
+    color: 'grey',
     marginLeft: 8,
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4BBC9B',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
