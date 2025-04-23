@@ -5,6 +5,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Image,
+  Alert,
 } from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
@@ -33,7 +34,10 @@ import PiChartFriend from './src/Screens/PieChartFriend';
 import ChatScreen from './src/Screens/chatscreengroup';
 import ChatScreenFriend from './src/Screens/FriendChatScreen';
 import ActivityScreen from './src/Screens/ActivityScreen';
-
+import messaging from '@react-native-firebase/messaging';
+import {PermissionsAndroid, Platform} from 'react-native';
+import firestore, {doc, updateDoc} from '@react-native-firebase/firestore';
+import {db} from './src/services/firebase';
 const Stack = createStackNavigator<RootStackParamList>();
 
 const AuthStack = () => (
@@ -107,11 +111,64 @@ const AppStack = () => (
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {userId, loading} = useSelector((state: RootState) => state.auth);
+  const requestNotificationPermission = async () => {
+    if (Platform.OS === 'android') {
+      await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      );
+    }
+  };
+
+  const getAndSaveFCMToken = async (userId: string) => {
+    try {
+      await requestNotificationPermission();
+      const token = await messaging().getToken();
+      console.log('FCM Token:', token);
+
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        fcmToken: token,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return token;
+    } catch (error) {
+      console.error('Error with FCM token:', error);
+      throw error;
+    }
+  };
+
+  const setupForegroundNotifications = () => {
+    return messaging().onMessage(async remoteMessage => {
+      console.log('Foreground notification:', remoteMessage);
+      Alert.alert(
+        remoteMessage.notification?.title || 'Notification',
+        remoteMessage.notification?.body,
+      );
+    });
+  };
+
+  const setupBackgroundNotifications = () => {
+    messaging().setBackgroundMessageHandler(async remoteMessage => {
+      console.log('Background notification:', remoteMessage);
+    });
+  };
 
   useEffect(() => {
     dispatch(loadAuthState());
+    const unsubscribeForeground = setupForegroundNotifications();
+    setupBackgroundNotifications();
+
+    return () => {
+      unsubscribeForeground();
+    };
   }, [dispatch]);
 
+  useEffect(() => {
+    if (userId) {
+      getAndSaveFCMToken(userId);
+    }
+  }, [userId]);
   if (loading) {
     return (
       <View style={styles.loadingContainer}>

@@ -111,8 +111,8 @@ android {
 dependencies {
    
     implementation("com.facebook.react:react-android")
-implementation project(':react-native-contacts')
-
+    implementation project(':react-native-contacts')
+    implementation 'com.google.firebase:firebase-messaging:21.14.0'
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

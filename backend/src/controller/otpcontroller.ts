@@ -5,9 +5,6 @@ import transporter from "../config/mailer";
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
 
-  console.log("====================================");
-  console.log(email);
-  console.log("====================================");
   if (!email) {
     res.status(400).json({ message: "Email is required" });
     return;

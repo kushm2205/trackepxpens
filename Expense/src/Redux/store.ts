@@ -5,7 +5,7 @@ import groupreducer from '../Redux/slice/GroupSlice';
 import friendsReducer from '../Redux/slice/friendslice';
 import friendExpensesReducer from '../Redux/slice/expnseSlice'; // Corrected import
 import personalExpensesReducer from '../Redux/slice/personalexpenssslice';
-
+import notificationReducer from '../Redux/slice/notificationslice';
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -13,6 +13,7 @@ export const store = configureStore({
     friends: friendsReducer,
     friendExpenses: friendExpensesReducer, // Corrected reducer name
     personalExpenses: personalExpensesReducer,
+    notifications: notificationReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

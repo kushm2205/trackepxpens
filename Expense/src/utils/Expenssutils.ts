@@ -55,14 +55,12 @@ export const calculateSettlements = (
   const settlements = [];
   const balancesCopy = {...balances};
 
-  // Filter out nearly zero balances (to avoid floating point issues)
   Object.keys(balancesCopy).forEach(key => {
     if (Math.abs(balancesCopy[key]) < 0.01) {
       delete balancesCopy[key];
     }
   });
 
-  // Sort from debtors (negative) to creditors (positive)
   const sortedEntries = Object.entries(balancesCopy).sort(
     (a, b) => a[1] - b[1],
   );
@@ -74,7 +72,6 @@ export const calculateSettlements = (
     const [debtor, debt] = sortedEntries[i];
     const [creditor, credit] = sortedEntries[j];
 
-    // Only handle legitimate debts and credits
     if (debt >= 0) {
       i++;
       continue;
@@ -84,10 +81,8 @@ export const calculateSettlements = (
       continue;
     }
 
-    // Calculate amount to settle (minimum of debt and credit)
     const amount = Math.min(-debt, credit);
     if (amount > 0.01) {
-      // Only add meaningful transactions
       settlements.push({
         from: debtor,
         to: creditor,
@@ -95,11 +90,9 @@ export const calculateSettlements = (
       });
     }
 
-    // Update balances
     sortedEntries[i][1] += amount;
     sortedEntries[j][1] -= amount;
 
-    // Move pointers if balances are settled
     if (Math.abs(sortedEntries[i][1]) < 0.01) i++;
     if (Math.abs(sortedEntries[j][1]) < 0.01) j--;
   }
@@ -107,24 +100,19 @@ export const calculateSettlements = (
   return settlements;
 };
 
-// New helper function to get user-specific balance summary
 export const getUserBalanceSummary = (
   balances: Record<string, number>,
   userId: string,
   memberNames: Record<string, string>,
 ) => {
-  // User's total balance
   const userBalance = balances[userId] || 0;
 
-  // Create settlement plan
   const settlements = calculateSettlements(balances);
 
-  // Filter settlements relevant to this user
   const userSettlements = settlements.filter(
     s => s.from === userId || s.to === userId,
   );
 
-  // Format transactions for display
   const formattedTransactions = userSettlements.map(s => {
     const isReceiving = s.to === userId;
     const otherUser = isReceiving ? s.from : s.to;
