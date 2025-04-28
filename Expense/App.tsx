@@ -113,54 +113,96 @@ const AppContent: React.FC = () => {
   const {userId, loading} = useSelector((state: RootState) => state.auth);
   const requestNotificationPermission = async () => {
     if (Platform.OS === 'android') {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.error('Permission request failed:', err);
+        return false;
+      }
+    } else if (Platform.OS === 'ios') {
+      const authStatus = await messaging().requestPermission();
+      return (
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL
       );
     }
+    return false;
   };
 
   const getAndSaveFCMToken = async (userId: string) => {
     try {
-      await requestNotificationPermission();
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        console.log('Notification permissions denied');
+        return null;
+      }
+
       const token = await messaging().getToken();
       console.log('FCM Token:', token);
 
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        fcmToken: token,
-        updatedAt: new Date().toISOString(),
-      });
+      if (token && userId) {
+        await firestore().collection('users').doc(userId).update({
+          fcmToken: token,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+      }
 
       return token;
     } catch (error) {
       console.error('Error with FCM token:', error);
-      throw error;
+      return null;
     }
   };
 
   const setupForegroundNotifications = () => {
     return messaging().onMessage(async remoteMessage => {
-      console.log('Foreground notification:', remoteMessage);
+      console.log('Foreground notification received:', remoteMessage);
+
       Alert.alert(
-        remoteMessage.notification?.title || 'Notification',
-        remoteMessage.notification?.body,
+        remoteMessage.notification?.title || 'New Notification',
+        remoteMessage.notification?.body || '',
+        [{text: 'OK'}],
       );
     });
   };
 
   const setupBackgroundNotifications = () => {
     messaging().setBackgroundMessageHandler(async remoteMessage => {
-      console.log('Background notification:', remoteMessage);
+      console.log('Background notification received:', remoteMessage);
+      // Handle background notification
     });
+  };
+
+  const setupNotificationOpenedApp = () => {
+    return messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('Notification opened app:', remoteMessage);
+    });
+  };
+
+  const checkInitialNotification = async () => {
+    const remoteMessage = await messaging().getInitialNotification();
+    if (remoteMessage) {
+      console.log(
+        'App opened from quit state via notification:',
+        remoteMessage,
+      );
+    }
   };
 
   useEffect(() => {
     dispatch(loadAuthState());
+
     const unsubscribeForeground = setupForegroundNotifications();
     setupBackgroundNotifications();
+    const unsubscribeOpenedApp = setupNotificationOpenedApp();
+    checkInitialNotification();
 
     return () => {
       unsubscribeForeground();
+      unsubscribeOpenedApp && unsubscribeOpenedApp();
     };
   }, [dispatch]);
 
@@ -183,7 +225,6 @@ const AppContent: React.FC = () => {
     </NavigationContainer>
   );
 };
-
 const App: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>

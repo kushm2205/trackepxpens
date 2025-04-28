@@ -3,32 +3,32 @@ import {View, Text, StyleSheet, Dimensions, ScrollView} from 'react-native';
 import {PieChart} from 'react-native-chart-kit';
 import {useSelector} from 'react-redux';
 import {RootState} from '../Redux/store';
+import {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {MemberBalance, RootStackParamList} from '../types/types';
+import {ChartData} from 'react-native-chart-kit/dist/HelperTypes';
 
-interface ChartData {
-  name: string;
-  amount: number;
-  color: string;
-  legendFontColor: string;
-  legendFontSize: number;
-}
-
-interface MemberBalance {
-  memberId: string;
-  name: string;
-  balance: number;
-}
-
-interface PieChartScreenProps {
-  route: {
-    params: {
-      chartData: ChartData[];
-      groupName: string;
-      memberBalances: MemberBalance[];
-    };
-  };
-}
-
-const PieChartScreen: React.FC<PieChartScreenProps> = ({route}) => {
+// type PieChartScreenProps = NativeStackScreenProps<
+//   RootStackParamList,
+//   'PieChart'
+// > & {
+//   route: {
+//     params: {
+//       chartData: ChartData[];
+//       groupName: string;
+//       memberBalances: MemberBalance[];
+//     };
+//   };
+// };
+export type PieChartScreenParams = {
+  chartData: ChartData[];
+  groupName: string;
+  memberBalances: MemberBalance[];
+};
+type PieChartScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  'PieChart'
+>;
+const PieChartScreen: React.FC<PieChartScreenProps> = ({route, navigation}) => {
   const {chartData, groupName, memberBalances} = route.params;
   const {userId: currentUserId} = useSelector((state: RootState) => state.auth);
   const screenWidth = Dimensions.get('window').width;

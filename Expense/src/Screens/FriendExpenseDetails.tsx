@@ -8,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import {useRoute, useNavigation, RouteProp} from '@react-navigation/native';
 import {Friend} from '../types/types';
@@ -52,7 +53,50 @@ const FriendExpenseDetails = () => {
     fetchUserName();
     setPaidBySelection('user');
   }, [loggedInUser.userId]);
-  const handleAddExpense = () => {
+  const sendExpenseNotification = async (expenseData: any) => {
+    try {
+      const response = await fetch(
+        'http://192.168.200.92:5000/send-expense-notification',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            payerId: loggedInUser.userId,
+            friendId: friend.userId || friend.phone,
+            expenseId: expenseData.id || new Date().getTime().toString(),
+            description: description,
+            amount: parseFloat(amount),
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to send notification:', errorData);
+      } else {
+        console.log('Notification sent successfully');
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  };
+
+  const handleAddExpense = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid amount');
+      return;
+    }
+
+    if (!description) {
+      Alert.alert(
+        'Missing Description',
+        'Please add a description for this expense',
+      );
+      return;
+    }
+
     const paidBy =
       paidBySelection === 'user'
         ? loggedInUser.userId || ''
@@ -66,16 +110,30 @@ const FriendExpenseDetails = () => {
       splitBetween.push(loggedInUser.userId || '');
     }
 
-    dispatch(
-      addFriendExpenseThunk({
+    if (splitBetween.length === 0) {
+      Alert.alert(
+        'Invalid Split',
+        'Please select at least one person to split with',
+      );
+      return;
+    }
+
+    try {
+      const expenseData = {
         paidBy: paidBy,
         amount: parseFloat(amount),
         splitBetween,
         description,
         friendId: friend.userId || friend.phone || '',
-      }),
-    );
-    navigation.goBack();
+      };
+
+      await dispatch(addFriendExpenseThunk(expenseData));
+      await sendExpenseNotification(expenseData);
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      Alert.alert('Error', 'Failed to add expense. Please try again.');
+    }
   };
 
   return (

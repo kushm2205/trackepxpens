@@ -9,6 +9,9 @@ import {
   PermissionsAndroid,
   Platform,
   Alert,
+  Linking,
+  StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import Contacts from 'react-native-contacts';
 import auth from '@react-native-firebase/auth';
@@ -31,6 +34,7 @@ const FriendRequestScreen = ({navigation}: any) => {
   const [contactResults, setContactResults] = useState<any[]>([]);
   const {userId} = useSelector((state: RootState) => state.auth);
   const [existingFriends, setExistingFriends] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const requestContactPermission = async () => {
     if (Platform.OS === 'android') {
@@ -39,12 +43,39 @@ const FriendRequestScreen = ({navigation}: any) => {
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
-    // iOS: Permission handled by system on first use
+
+    return true;
+  };
+
+  const requestSmsPermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.SEND_SMS,
+        {
+          title: 'SMS Permission',
+          message: 'This app needs access to send SMS for invitations.',
+          buttonPositive: 'Grant',
+        },
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
     return true;
   };
 
   const normalizePhoneNumber = (phone: string) => {
     return phone.replace(/\D/g, '').slice(-10);
+  };
+
+  const sendSMSInvitation = (phoneNumber: string) => {
+    const message = `Hi! I'd like to connect with you on PocketTracker. Download the app here: [App_Link]`;
+
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+
+    if (Platform.OS === 'android') {
+      Linking.openURL(`sms:${cleanNumber}?body=${encodeURIComponent(message)}`);
+    } else {
+      Linking.openURL(`sms:${cleanNumber}&body=${encodeURIComponent(message)}`);
+    }
   };
 
   const fetchContacts = async () => {
@@ -57,12 +88,14 @@ const FriendRequestScreen = ({navigation}: any) => {
       return;
     }
 
+    setLoading(true);
     Contacts.getAll()
       .then(async contacts => {
         const filtered = contacts.map(contact => ({
           name: contact.displayName,
           phone: normalizePhoneNumber(contact.phoneNumbers[0]?.number || ''),
           photo: contact.thumbnailPath || '',
+          isFirebaseUser: false,
         }));
 
         const matchedUsers = await getMatchingUsers(filtered);
@@ -71,7 +104,8 @@ const FriendRequestScreen = ({navigation}: any) => {
       .catch(err => {
         console.warn('Error fetching contacts:', err);
         Alert.alert('Error', 'Could not fetch contacts.');
-      });
+      })
+      .finally(() => setLoading(false));
   };
 
   const getMatchingUsers = async (contacts: any[]) => {
@@ -82,6 +116,7 @@ const FriendRequestScreen = ({navigation}: any) => {
       name: docSnap.data().name,
       phone: normalizePhoneNumber(docSnap.data().phone),
       photo: docSnap.data().profilePicture || '',
+      isFirebaseUser: true, // Mark as app user
     }));
 
     const results: any[] = [];
@@ -110,6 +145,34 @@ const FriendRequestScreen = ({navigation}: any) => {
     });
 
     return results;
+  };
+
+  const handleAddFriend = async (friend: any) => {
+    if (friend.isFirebaseUser) {
+      await addFriend(friend);
+    } else {
+      Alert.alert(
+        'Invite Friend',
+        `${friend.name} is not using the app. Would you like to invite them?`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Send Invite',
+            onPress: async () => {
+              await requestSmsPermission();
+              sendSMSInvitation(friend.phone);
+            },
+          },
+          {
+            text: 'Add Anyway',
+            onPress: () => addFriend(friend),
+          },
+        ],
+      );
+    }
   };
 
   const addFriend = async (friend: any) => {
@@ -178,64 +241,166 @@ const FriendRequestScreen = ({navigation}: any) => {
   }, [searchQuery]);
 
   const renderContact = ({item}: any) => (
-    <View style={{flexDirection: 'row', alignItems: 'center', padding: 10}}>
+    <View style={styles.contactItem}>
       <Image
         source={
           item.photo ? {uri: item.photo} : require('../assets/download.png')
         }
-        style={{width: 40, height: 40, borderRadius: 20, marginRight: 10}}
+        style={styles.contactImage}
       />
-      <View style={{flex: 1}}>
-        <Text>{item.name}</Text>
-        <Text style={{color: 'gray'}}>{item.phone}</Text>
+      <View style={styles.contactInfo}>
+        <Text style={styles.contactName}>{item.name}</Text>
+        <Text style={styles.contactPhone}>{item.phone}</Text>
+        {item.isFirebaseUser ? (
+          <Text style={styles.appUserBadge}>App User</Text>
+        ) : (
+          <Text style={styles.nonUserBadge}>Not on App</Text>
+        )}
       </View>
-      <TouchableOpacity onPress={() => addFriend(item)}>
-        <Text style={{color: 'blue'}}>Add Friend</Text>
+      <TouchableOpacity
+        onPress={() => handleAddFriend(item)}
+        style={styles.addButton}>
+        <Text style={styles.addButtonText}>Add</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={{flex: 1, padding: 20}}>
+    <View style={styles.container}>
       <TextInput
         placeholder="Search by name or phone"
         value={searchQuery}
         onChangeText={setSearchQuery}
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          marginBottom: 20,
-        }}
+        style={styles.searchInput}
       />
-      {/* <FlatList
-        data={contactResults}
-        keyExtractor={item => item.phone || item.userId}
-        renderItem={renderContact}
-      /> */}
-      {contactResults.length === 0 ? (
-        <View style={{alignItems: 'center', marginTop: 50}}>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4CBB9B" />
+        </View>
+      ) : contactResults.length === 0 ? (
+        <View style={styles.emptyContainer}>
           <Ionicons name="search-outline" size={80} color="gray" />
-          <Text style={{marginTop: 10, fontSize: 16, color: 'gray'}}>
-            No contacts found
-          </Text>
+          <Text style={styles.emptyText}>No contacts found</Text>
         </View>
       ) : (
         <FlatList
           data={contactResults}
           keyExtractor={item => item.phone || item.userId}
           renderItem={renderContact}
+          contentContainerStyle={styles.listContainer}
         />
       )}
 
       <TouchableOpacity
         onPress={() => navigation.goBack()}
-        style={{marginTop: 20, alignItems: 'center'}}>
-        <Text style={{color: 'green'}}>Go to My Friends</Text>
+        style={styles.goBackButton}>
+        <Text style={styles.goBackText}>Go to My Friends</Text>
       </TouchableOpacity>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: 'gray',
+  },
+  listContainer: {
+    paddingBottom: 20,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 10,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+  },
+  contactImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactName: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  contactPhone: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  appUserBadge: {
+    fontSize: 12,
+    color: 'white',
+    backgroundColor: '#4CBB9B',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  nonUserBadge: {
+    fontSize: 12,
+    color: 'white',
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  addButton: {
+    backgroundColor: '#4CBB9B',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  goBackButton: {
+    marginTop: 20,
+    padding: 12,
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  goBackText: {
+    color: '#4CBB9B',
+    fontWeight: 'bold',
+  },
+});
 
 export default FriendRequestScreen;

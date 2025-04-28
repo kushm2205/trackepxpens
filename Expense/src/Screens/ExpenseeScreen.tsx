@@ -88,7 +88,7 @@ const AddExpenseScreen: React.FC = () => {
       Alert.alert('Error', 'Please fill all fields.');
       return;
     }
-    console.log('Tranc', splitBetween);
+
     try {
       await addExpense(
         groupId,
@@ -97,6 +97,14 @@ const AddExpenseScreen: React.FC = () => {
         splitBetween,
         description,
       );
+
+      await sendExpenseNotification({
+        payerId: paidBy,
+        groupId,
+        expenseId: '',
+        description,
+        amount: parseFloat(amount),
+      });
 
       dispatch(
         addExpenseTransaction({
@@ -111,6 +119,33 @@ const AddExpenseScreen: React.FC = () => {
     } catch (err) {
       console.error('Error adding expense:', err);
       Alert.alert('Error', 'Failed to add expense.');
+    }
+  };
+
+  const sendExpenseNotification = async (notificationData: {
+    payerId: string;
+    groupId: string;
+    expenseId: string;
+    description: string;
+    amount: number;
+  }) => {
+    try {
+      const response = await fetch(
+        'http://192.168.200.92:5000/send-group-expense-notification',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(notificationData),
+        },
+      );
+
+      if (!response.ok) {
+        console.error('Failed to send notification');
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
     }
   };
 

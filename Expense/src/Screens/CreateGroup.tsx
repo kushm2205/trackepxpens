@@ -40,6 +40,7 @@ const groupImage5 = require('../assets/money.jpeg');
 const groupImage6 = require('../assets/other.png');
 const groupImage7 = require('../assets/travel.jpeg');
 type CreateGroupProp = StackNavigationProp<RootStackParamList, 'CreateGroup'>;
+import {Linking} from 'react-native';
 
 const CreateGroup = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -94,8 +95,29 @@ const CreateGroup = () => {
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery, users, deviceContacts, dispatch]);
+  const sendSMSInvitation = (phoneNumber: string, groupName: string) => {
+    const message = `Hi! I'm inviting you to join our group "${groupName}" on SplitEase. Download the app here: [APP_DOWNLOAD_LINK]`;
 
+    // Remove non-numeric characters from phone number
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+
+    if (Platform.OS === 'android') {
+      Linking.openURL(`sms:${cleanNumber}?body=${encodeURIComponent(message)}`);
+    } else {
+      Linking.openURL(`sms:${cleanNumber}&body=${encodeURIComponent(message)}`);
+    }
+  };
   const requestContactsPermission = async () => {
+    if (Platform.OS === 'android') {
+      await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.SEND_SMS,
+        {
+          title: 'SMS Permission',
+          message: 'This app needs access to send SMS for invitations.',
+          buttonPositive: 'Grant',
+        },
+      );
+    }
     try {
       if (Platform.OS === 'ios') {
         try {
@@ -142,36 +164,39 @@ const CreateGroup = () => {
   };
 
   const handleCreateGroup = async () => {
-    if (!userId) {
-      return;
-    }
-
-    if (!groupName.trim()) {
-      return;
-    }
-
-    if (selectedMembers.length === 0) {
-      return;
-    }
+    if (!userId) return;
+    if (!groupName.trim()) return;
+    if (selectedMembers.length === 0) return;
 
     setIsCreating(true);
 
     try {
+      // Filter out non-app users (contacts without Firebase IDs)
+      const appUserMembers = selectedMembers.filter(
+        memberId =>
+          users.some(user => user.id === memberId) ||
+          deviceContacts.some(
+            contact => contact.id === memberId && contact.isFirebaseUser,
+          ),
+      );
+
       await dispatch(
         createNewGroup({
           groupName,
           adminUserId: userId,
-          members: selectedMembers,
+          members: appUserMembers,
           groupImage: groupImage || photoURL,
+          invitedContacts: selectedMembers.filter(
+            memberId => !appUserMembers.includes(memberId),
+          ),
         }),
       );
 
-      Alert.alert('Success', 'Group created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      Alert.alert(
+        'Group Created',
+        'Group created successfully! Invitations sent to non-app users.',
+        [{text: 'OK', onPress: () => navigation.goBack()}],
+      );
     } catch (error) {
       console.error('Error creating group:', error);
     } finally {
@@ -213,30 +238,47 @@ const CreateGroup = () => {
       </View>
     );
   };
-
   const renderContactItem = ({item}: {item: ContactItem}) => {
     if (!item) return null;
 
     const itemId = item.id || item.recordID || Math.random().toString();
-
     const displayName = item.name || item.displayName || 'Unknown';
+    const isAppUser = item.isFirebaseUser;
 
-    let phoneDisplay = 'No number';
+    let phoneNumber = '';
     if (item.phone) {
-      phoneDisplay = item.phone;
+      phoneNumber = item.phone;
     } else if (item.phoneNumbers?.length > 0) {
-      phoneDisplay = item.phoneNumbers[0].number;
+      phoneNumber = item.phoneNumbers[0].number;
     }
 
-    console.log('Rendering contact:', {
-      id: itemId,
-      name: displayName,
-      phone: phoneDisplay,
-      isSelected: selectedMembers.includes(itemId),
-    });
+    const handleContactPress = () => {
+      if (isAppUser) {
+        handleToggleMember(itemId);
+      } else {
+        Alert.alert(
+          'Invite to App',
+          `${displayName} is not using the app. Send invitation?`,
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Send Invite',
+              onPress: () => sendSMSInvitation(phoneNumber, groupName),
+            },
+            {
+              text: 'Add Anyway',
+              onPress: () => handleToggleMember(itemId),
+            },
+          ],
+        );
+      }
+    };
 
     return (
-      <TouchableOpacity onPress={() => handleToggleMember(itemId)}>
+      <TouchableOpacity onPress={handleContactPress}>
         <View
           style={[
             styles.contactItem,
@@ -252,9 +294,13 @@ const CreateGroup = () => {
           />
           <View style={styles.contactInfo}>
             <Text style={styles.contactName}>{displayName}</Text>
-            <Text style={styles.contactPhone}>{phoneDisplay}</Text>
-            {item.isFirebaseUser && (
+            <Text style={styles.contactPhone}>
+              {phoneNumber || 'No number'}
+            </Text>
+            {isAppUser ? (
               <Text style={styles.firebaseBadge}>App User</Text>
+            ) : (
+              <Text style={styles.nonUserBadge}>Not on App</Text>
             )}
           </View>
           {selectedMembers.includes(itemId) && (
@@ -443,6 +489,16 @@ const styles = StyleSheet.create({
   },
   selectedContact: {
     backgroundColor: '#33FFFF',
+  },
+  nonUserBadge: {
+    fontSize: 12,
+    color: 'white',
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginTop: 2,
   },
   contactImage: {
     width: 40,

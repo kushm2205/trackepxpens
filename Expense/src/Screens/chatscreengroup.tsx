@@ -34,7 +34,6 @@ const ChatScreen = ({route}: any) => {
   const [userName, setUserName] = useState('');
   const authState = useSelector((state: RootState) => state.auth);
 
-  // Fetch messages from Firestore
   useEffect(() => {
     const q = query(
       collection(db, 'groups', groupId, 'messages'),
@@ -53,7 +52,6 @@ const ChatScreen = ({route}: any) => {
     return () => unsubscribe();
   }, [groupId]);
 
-  // Fetch current user's name from Firestore
   useEffect(() => {
     const fetchUserName = async () => {
       if (authState.userId) {
@@ -79,11 +77,10 @@ const ChatScreen = ({route}: any) => {
     if (message.trim() === '') return;
 
     try {
-      // Use the fetched userName instead of relying on authState.name
       await addDoc(collection(db, 'groups', groupId, 'messages'), {
         text: message,
         senderId: authState.userId,
-        senderName: userName || 'Anonymous', // Use the fetched userName
+        senderName: userName || 'Anonymous',
         createdAt: new Date(),
       });
 

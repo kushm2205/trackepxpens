@@ -11,7 +11,6 @@ import {
   ScrollView,
   Animated,
   KeyboardAvoidingView,
-  Switch,
   Platform,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';

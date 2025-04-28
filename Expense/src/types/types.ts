@@ -24,11 +24,23 @@ export type RootStackParamList = {
   GroupChatScreen: {groupId: string; groupName: string};
 
   GroupDetails: {groupId: string};
-  PieChart: {someData: string};
+  PieChart: PieChartScreenParams;
   EditExpense: {groupId: string; expenseId: string};
   FriendPie: {friend: Friend};
   PiChartFriend: {friend: Friend; expenses: any[]};
 };
+export type PieChartScreenParams = {
+  chartData: ChartData[];
+  groupName: string;
+  memberBalances: MemberBalance[];
+};
+interface ChartData {
+  name: string;
+  amount: number;
+  color: string;
+  legendFontColor: string;
+  legendFontSize: number;
+}
 
 export interface User {
   id: string;
@@ -43,7 +55,7 @@ export interface Friend {
   name: string;
   photo?: string;
 }
-// Contact types
+
 export interface PhoneNumber {
   number: string;
   label?: string;
@@ -175,7 +187,6 @@ export interface ActivityItem {
   name?: string;
   description?: string;
   splitBetween?: string[];
-  // Add other activity properties as needed
 }
 
 export interface MemberBalance {
