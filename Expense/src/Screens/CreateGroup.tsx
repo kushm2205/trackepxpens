@@ -31,7 +31,7 @@ import {RootStackParamList} from '../types/types';
 import {useNavigation} from '@react-navigation/native';
 
 const defaultProfileImage = require('../assets/download.png');
-// Default group images
+
 const groupImage1 = require('../assets/family.jpeg');
 const groupImage2 = require('../assets/food.jpeg');
 const groupImage3 = require('../assets/friend.jpeg');

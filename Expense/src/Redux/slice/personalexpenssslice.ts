@@ -22,7 +22,7 @@ export interface PersonalExpense {
 
 interface IExpenseInputData {
   userId: string;
-  amount: number; // Changed from Float to number
+  amount: number;
   description: string;
   category: string;
   date: Date;
@@ -55,18 +55,16 @@ export const addPersonalExpense = createAsyncThunk<
       createdAt: serverTimestamp(),
     };
 
-    // Add document to collection
     const docRef = await addDoc(
       collection(db, 'personal_expenses'),
       expenseToAdd,
     );
 
-    // Return the data with the generated document ID
     return {
       id: docRef.id,
       ...expenseToAdd,
-      // We need to handle the serverTimestamp specially since it's not immediately available
-      createdAt: Timestamp.now(), // Use current timestamp for the client
+
+      createdAt: Timestamp.now(),
     } as PersonalExpense;
   } catch (error) {
     console.error('Error adding personal expense:', error);
@@ -74,7 +72,6 @@ export const addPersonalExpense = createAsyncThunk<
   }
 });
 
-// Async thunk to fetch personal expenses
 export const fetchPersonalExpenses = createAsyncThunk<
   PersonalExpense[],
   string,
@@ -92,9 +89,7 @@ export const fetchPersonalExpenses = createAsyncThunk<
       return {
         id: doc.id,
         ...data,
-        // Ensure date is properly handled as Timestamp
         date: data.date,
-        // Handle createdAt, which might be a server timestamp
         createdAt: data.createdAt,
       } as PersonalExpense;
     });
@@ -117,7 +112,6 @@ const personalExpensesSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-      // Add personal expense cases
       .addCase(addPersonalExpense.pending, state => {
         state.loading = true;
         state.error = null;
@@ -134,7 +128,6 @@ const personalExpensesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Fetch personal expenses cases
       .addCase(fetchPersonalExpenses.pending, state => {
         state.loading = true;
         state.error = null;

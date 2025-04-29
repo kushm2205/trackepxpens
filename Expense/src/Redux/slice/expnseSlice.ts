@@ -1,9 +1,7 @@
-// Redux/slice/expensesSlice.ts
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
-import {addFriendExpense} from '../../services/firestore'; // Import the new function
+import {addFriendExpense} from '../../services/firestore';
 
 interface FriendExpense {
-  // Renamed interface
   friendId: string;
   paidBy: string;
   amount: number;
@@ -14,14 +12,12 @@ interface FriendExpense {
 }
 
 interface FriendExpensesState {
-  // Renamed state
   friendExpenses: FriendExpense[];
   loading: boolean;
   error: string | null;
 }
 
 const initialState: FriendExpensesState = {
-  // Renamed initialState
   friendExpenses: [],
   loading: false,
   error: null,
@@ -39,7 +35,6 @@ export const addFriendExpenseThunk = createAsyncThunk(
     {rejectWithValue},
   ) => {
     try {
-      // This will now create TWO expense documents, one for each user
       const expenseId = await addFriendExpense(
         paidBy,
         amount,

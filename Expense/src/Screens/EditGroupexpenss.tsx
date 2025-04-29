@@ -31,14 +31,11 @@ const EditExpenseScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [groupMembers, setGroupMembers] = useState<string[]>([]);
-
-  // Modal state
   const [isModalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch expense data
         const expenseRef = doc(db, 'expenses', expenseId);
         const expenseSnap = await getDoc(expenseRef);
 
@@ -51,8 +48,6 @@ const EditExpenseScreen: React.FC = () => {
         setAmount(expenseData.amount.toString());
         setPaidBy(expenseData.paidBy);
         setSplitBetween(expenseData.splitBetween);
-
-        // Fetch group members
         const groupRef = doc(db, 'groups', groupId);
         const groupSnap = await getDoc(groupRef);
 

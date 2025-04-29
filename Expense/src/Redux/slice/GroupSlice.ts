@@ -1,5 +1,3 @@
-// Update to your GroupSlice.ts file
-
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
 import {auth, db} from '../../services/firebase';
 import {
@@ -36,7 +34,6 @@ import {calculateShares} from '../../utils/Expenssutils';
 import {NavigationProp} from '@react-navigation/native';
 import {RootStackParamList} from '../../types/types';
 
-// Update the CreateGroupPayload interface to include optional navigation
 interface ExtendedCreateGroupPayload extends CreateGroupPayload {
   navigation?: NavigationProp<RootStackParamList>;
 }
@@ -159,12 +156,10 @@ export const createNewGroup = createAsyncThunk<
         groupImageUrl: groupImage,
       } as group;
 
-      // After creating the group, force a refresh of groups
       if (adminUserId) {
         dispatch(fetchGroups(adminUserId));
       }
 
-      // Navigate back if navigation is provided
       if (navigation) {
         navigation.navigate('GroupScreen');
       }
@@ -183,7 +178,6 @@ export const getDeviceContacts = createAsyncThunk<
   {rejectValue: string}
 >('group/getDeviceContacts', async (contactsList, {rejectWithValue}) => {
   try {
-    // Format device contacts to match our interface
     const formattedContacts = contactsList.map(contact => ({
       recordID: contact.recordID,
       displayName: contact.displayName || 'Unknown',

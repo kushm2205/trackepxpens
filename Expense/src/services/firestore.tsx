@@ -249,38 +249,32 @@ export const addFriendExpense = async (
   friendId: string,
 ): Promise<string> => {
   try {
-    // Find the current user (the one who isn't the friend)
     const currentUserId = splitBetween.find(id => id !== friendId);
 
     if (!currentUserId) {
       throw new Error('Current user not found in splitBetween array');
     }
 
-    // Create TWO identical expenses, one for each user's view
-
-    // First expense - for current user's view
     const expenseData1 = {
       paidBy,
       amount,
       splitBetween,
       description,
-      friendId, // From your perspective, this is your friend
+      friendId,
       createdAt: serverTimestamp(),
       settled: false,
     };
 
-    // Second expense - for friend's view
     const expenseData2 = {
       paidBy,
       amount,
       splitBetween,
       description,
-      friendId: currentUserId, // From friend's perspective, you are their friend
+      friendId: currentUserId,
       createdAt: serverTimestamp(),
       settled: false,
     };
 
-    // Save both records to Firebase
     const docRef1 = await addDoc(
       collection(db, 'friend_expenses'),
       expenseData1,
@@ -294,64 +288,13 @@ export const addFriendExpense = async (
     throw new Error('Failed to add expense');
   }
 };
-// export const calculateFriendBalance = async (
-//   userId: string,
-//   friendId: string,
-// ) => {
-//   let balance = 0;
-
-//   try {
-//     const groupExpensesSnap = await getDocs(
-//       query(
-//         collection(db, 'expenses'),
-//         where('splitBetween', 'array-contains', userId),
-//       ),
-//     );
-
-//     groupExpensesSnap.forEach(docSnap => {
-//       const expense = docSnap.data();
-//       const isFriendInvolved = expense.splitBetween.includes(friendId);
-//       if (isFriendInvolved) {
-//         const share = expense.amount / expense.splitBetween.length;
-//         if (expense.paidBy === userId) {
-//           balance += share;
-//         } else if (expense.paidBy === friendId) {
-//           balance -= share;
-//         }
-//       }
-//     });
-
-//     const friendExpensesSnap = await getDocs(
-//       query(
-//         collection(db, 'friend_expenses'),
-//         where('friendId', '==', friendId),
-//       ),
-//     );
-
-//     friendExpensesSnap.forEach(docSnap => {
-//       const expense = docSnap.data();
-//       if (expense.paidBy === userId) {
-//         balance += expense.amount / expense.splitBetween.length;
-//       } else if (expense.paidBy === friendId) {
-//         balance -= expense.amount / expense.splitBetween.length;
-//       }
-//     });
-
-//     return balance;
-//   } catch (error) {
-//     console.error('Error calculating balance:', error);
-//     return 0;
-//   }
-// };
 
 export const deleteGroupFromFirestore = async (groupId: string) => {
   try {
     const batch = writeBatch(db);
 
-    // Delete the group document
     batch.delete(doc(db, 'groups', groupId));
 
-    // Delete all expenses associated with this group
     const expensesQuery = query(
       collection(db, 'expenses'),
       where('groupId', '==', groupId),
@@ -361,14 +304,12 @@ export const deleteGroupFromFirestore = async (groupId: string) => {
       batch.delete(expenseDoc.ref);
     });
 
-    // Delete all messages associated with this group (if you have a messages subcollection)
     const messagesQuery = query(collection(db, 'groups', groupId, 'messages'));
     const messagesSnapshot = await getDocs(messagesQuery);
     messagesSnapshot.forEach(messageDoc => {
       batch.delete(messageDoc.ref);
     });
 
-    // Commit all deletions in a single batch
     await batch.commit();
 
     console.log(`Group ${groupId} and all related data deleted successfully`);

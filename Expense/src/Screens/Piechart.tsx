@@ -7,18 +7,6 @@ import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {MemberBalance, RootStackParamList} from '../types/types';
 import {ChartData} from 'react-native-chart-kit/dist/HelperTypes';
 
-// type PieChartScreenProps = NativeStackScreenProps<
-//   RootStackParamList,
-//   'PieChart'
-// > & {
-//   route: {
-//     params: {
-//       chartData: ChartData[];
-//       groupName: string;
-//       memberBalances: MemberBalance[];
-//     };
-//   };
-// };
 export type PieChartScreenParams = {
   chartData: ChartData[];
   groupName: string;
@@ -280,13 +268,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   positiveAmount: {
-    color: '#4CAF50', // Green
+    color: '#4CAF50',
   },
   negativeAmount: {
-    color: '#F44336', // Red
+    color: '#F44336',
   },
   neutralAmount: {
-    color: '#2196F3', // Blue
+    color: '#2196F3',
   },
   statsContainer: {
     backgroundColor: '#fff',

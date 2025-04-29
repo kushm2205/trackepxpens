@@ -45,7 +45,6 @@ export const addFriend = createAsyncThunk(
         throw new Error('Friend already exists');
       }
 
-      // Fetch friend's user document
       const friendUserQuery = query(
         collection(db, 'users'),
         where('userId', '==', friendId),
@@ -61,17 +60,15 @@ export const addFriend = createAsyncThunk(
       const friendPhone = friendUserData.phone || friend.phone || '';
       const friendPhoto = friendUserData.photo || friend.photo || '';
 
-      // Add friend to current user's friend list
       await addDoc(collection(db, 'friends'), {
         userId: userId,
         friendId: friendId,
-        name: friendName, // Use fetched friend name
-        phone: friendPhone, // Use fetched friend phone
-        photo: friendPhoto, // Use fetched friend photo
+        name: friendName,
+        phone: friendPhone,
+        photo: friendPhoto,
         createdAt: serverTimestamp(),
       });
 
-      // Fetch current user's data
       const currentUserQuery = query(
         collection(db, 'users'),
         where('userId', '==', userId),
@@ -84,13 +81,12 @@ export const addFriend = createAsyncThunk(
 
       const currentUserData = currentUserSnapshot.docs[0].data();
 
-      // Add current user to friend's friend list
       await addDoc(collection(db, 'friends'), {
-        userId: friendId, // Friend's ID as the owner
-        friendId: userId, // Current user as the friend
-        name: currentUserData.name || 'User', // Current user's name
-        phone: currentUserData.phone || '', // Current user's phone
-        photo: currentUserData.photo || '', // Current user's photo
+        userId: friendId,
+        friendId: userId,
+        name: currentUserData.name || 'User',
+        phone: currentUserData.phone || '',
+        photo: currentUserData.photo || '',
         createdAt: serverTimestamp(),
       });
 

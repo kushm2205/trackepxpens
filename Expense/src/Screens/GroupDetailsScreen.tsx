@@ -28,6 +28,7 @@ import {
 import {db} from '../services/firestore';
 import {format} from 'date-fns';
 import {calculateSettlements} from '../utils/Expenssutils';
+import type {AppDispatch} from '../Redux/store';
 import {
   RootStackParamList,
   Settlement,
@@ -45,7 +46,7 @@ type GroupDetailsScreenNavigationProp = StackNavigationProp<
 >;
 
 const GroupDetailsScreen: React.FC = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<GroupDetailsScreenNavigationProp>();
   const {selectedGroup, loading, error, memberNames} = useSelector(
     (state: RootState) => state.group,

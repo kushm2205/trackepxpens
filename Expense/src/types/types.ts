@@ -208,7 +208,7 @@ export type EditExpenseRouteProp = {
 export type FriendExpenseListRouteProp = {
   friend: Friend;
 };
-// types/notificationTypes.ts
+
 export type NotificationType = {
   id?: string;
   title: string;

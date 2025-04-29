@@ -124,7 +124,7 @@ const EditFriendExpenss = () => {
               styles.checkbox,
               splitBetween.includes(loggedInUserId) && styles.checkboxSelected,
             ]}
-            onPress={() => toggleUserInSplit(loggedInUserId)}>
+            onPress={() => toggleUserInSplit(loggedInUserId!)}>
             <Text
               style={[
                 styles.checkboxText,

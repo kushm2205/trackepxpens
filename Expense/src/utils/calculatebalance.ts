@@ -26,9 +26,9 @@ export const calculateFriendBalance = async (
       if (isFriendInvolved) {
         const share = expense.amount / expense.splitBetween.length;
         if (expense.paidBy === userId) {
-          balance += share; // friend owes user
+          balance += share;
         } else if (expense.paidBy === friendId) {
-          balance -= share; // user owes friend
+          balance -= share;
         }
       }
     });

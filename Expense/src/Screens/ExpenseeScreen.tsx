@@ -22,7 +22,7 @@ import {
 import {addExpense, db} from '../services/firestore';
 import {RootStackParamList} from '../types/types';
 import {addDoc, collection, serverTimestamp} from 'firebase/firestore';
-
+import type {AppDispatch} from '../Redux/store';
 type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
 type AddExpenseScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -30,7 +30,7 @@ type AddExpenseScreenNavigationProp = StackNavigationProp<
 >;
 
 const AddExpenseScreen: React.FC = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<AddExpenseScreenNavigationProp>();
   const route = useRoute<AddExpenseScreenRouteProp>();
   const {groupId} = route.params;
@@ -276,7 +276,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: '#ffff',
     padding: 10,
-
     borderRadius: 10,
     marginBottom: 10,
   },

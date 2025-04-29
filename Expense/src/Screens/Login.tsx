@@ -3,14 +3,12 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   Alert,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Image,
 } from 'react-native';
-import axios from 'axios';
 import {
   auth,
   signInWithEmailAndPassword,
@@ -22,6 +20,7 @@ import {RootStackParamList} from '../types/types';
 import {useDispatch} from 'react-redux';
 import {login} from '../Redux/slice/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -31,14 +30,11 @@ const Login: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [userId, setUserId] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({
     email: '',
     password: '',
-    otp: '',
   });
 
   const validateForm = () => {
@@ -46,10 +42,8 @@ const Login: React.FC = () => {
     const newErrors = {
       email: '',
       password: '',
-      otp: '',
     };
 
-    // Email validation
     if (!email) {
       newErrors.email = 'Email is required';
       isValid = false;
@@ -58,7 +52,6 @@ const Login: React.FC = () => {
       isValid = false;
     }
 
-    // Password validation
     if (!password) {
       newErrors.password = 'Password is required';
       isValid = false;
@@ -67,20 +60,11 @@ const Login: React.FC = () => {
       isValid = false;
     }
 
-    // OTP validation (only if OTP is sent)
-    if (isOtpSent && !otp) {
-      newErrors.otp = 'OTP is required';
-      isValid = false;
-    } else if (isOtpSent && otp.length !== 6) {
-      newErrors.otp = 'OTP must be 6 digits';
-      isValid = false;
-    }
-
     setErrors(newErrors);
     return isValid;
   };
 
-  const verifyEmailPassword = async () => {
+  const handleLogin = async () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -91,55 +75,22 @@ const Login: React.FC = () => {
         password,
       );
       const user = userCredential.user;
-      setUserId(user.uid);
 
-      console.log('User authenticated:', user.uid);
+      await AsyncStorage.setItem('userId', user.uid);
+      await AsyncStorage.setItem('email', email);
 
-      sendOtp();
+      dispatch(login({userId: user.uid, email}));
     } catch (error: any) {
       let errorMessage = 'Invalid email or password.';
       if (error.code === 'auth/user-not-found') {
         errorMessage = 'No account found with this email.';
       } else if (error.code === 'auth/wrong-password') {
         errorMessage = 'Invalid password.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage =
+          'Too many failed attempts. Account temporarily disabled.';
       }
       Alert.alert('Error', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const sendOtp = async () => {
-    try {
-      await axios.post('http://192.168.200.92:5000/api/send-otp', {email});
-      Alert.alert('OTP Sent', 'Check your email for the OTP.');
-      setIsOtpSent(true);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send OTP');
-    }
-  };
-
-  const verifyOtp = async () => {
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    try {
-      const response = await axios.post(
-        'http://192.168.200.92:5000/api/verify-otp',
-        {
-          email,
-          otp: Number(otp),
-        },
-      );
-
-      if (response.status === 200) {
-        await AsyncStorage.setItem('userId', userId);
-        await AsyncStorage.setItem('email', email);
-
-        dispatch(login({userId, email}));
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Invalid OTP');
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +142,6 @@ const Login: React.FC = () => {
     checkLoginStatus();
   }, []);
 
-  // Clear errors when user types
   const handleEmailChange = (text: string) => {
     setEmail(text);
     if (errors.email) {
@@ -203,13 +153,6 @@ const Login: React.FC = () => {
     setPassword(text);
     if (errors.password) {
       setErrors({...errors, password: ''});
-    }
-  };
-
-  const handleOtpChange = (text: string) => {
-    setOtp(text);
-    if (errors.otp) {
-      setErrors({...errors, otp: ''});
     }
   };
 
@@ -233,7 +176,7 @@ const Login: React.FC = () => {
           onChangeText={handleEmailChange}
           keyboardType="email-address"
           style={[styles.input, errors.email ? styles.inputError : null]}
-          placeholder="your@email.com"
+          placeholder="Enter your email"
           autoCapitalize="none"
         />
         {errors.email ? (
@@ -241,13 +184,23 @@ const Login: React.FC = () => {
         ) : null}
 
         <Text style={styles.label}>Password</Text>
-        <TextInput
-          value={password}
-          onChangeText={handlePasswordChange}
-          secureTextEntry
-          style={[styles.input, errors.password ? styles.inputError : null]}
-          placeholder="******"
-        />
+        <View style={styles.PassPosition}>
+          <TextInput
+            value={password}
+            onChangeText={handlePasswordChange}
+            secureTextEntry={!showPassword}
+            style={[styles.input, errors.password ? styles.inputError : null]}
+            placeholder="Enter your password"
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Icon
+              name={showPassword ? 'eye-off' : 'eye'}
+              size={24}
+              color="gray"
+              style={{marginLeft: 10}}
+            />
+          </TouchableOpacity>
+        </View>
         {errors.password ? (
           <Text style={styles.errorText}>{errors.password}</Text>
         ) : null}
@@ -257,46 +210,18 @@ const Login: React.FC = () => {
           onPress={handleForgotPassword}>
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
-
-        {!isOtpSent ? (
-          <TouchableOpacity
-            style={styles.button}
-            onPress={verifyEmailPassword}
-            disabled={isLoading}>
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Login & Get OTP</Text>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <View>
-            <Text style={styles.label}>Enter OTP</Text>
-            <TextInput
-              value={otp}
-              onChangeText={handleOtpChange}
-              keyboardType="numeric"
-              style={[styles.input, errors.otp ? styles.inputError : null]}
-              placeholder="123456"
-              maxLength={6}
-            />
-            {errors.otp ? (
-              <Text style={styles.errorText}>{errors.otp}</Text>
-            ) : null}
-
-            <TouchableOpacity
-              style={styles.button}
-              onPress={verifyOtp}
-              disabled={isLoading}>
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Verify OTP</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+          disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Login</Text>
+          )}
+        </TouchableOpacity>
       </View>
+
       <TouchableOpacity
         style={styles.linkContainer}
         onPress={() => navigation.navigate('Signup')}>
@@ -324,16 +249,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     color: '#333',
   },
-  // input: {
-  //   borderWidth: 1,
-  //   borderColor: '#ddd',
-  //   borderRadius: 5,
-  //   marginBottom: 10,
-  //   fontSize: 16,
-  //   paddingVertical: 10,
-  //   paddingHorizontal: 15,
-  //   backgroundColor: '#f9f9f9',
-  // },
+  PassPosition: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   inputError: {
     borderColor: 'red',
   },

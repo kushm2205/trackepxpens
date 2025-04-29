@@ -21,7 +21,7 @@ import {useDispatch} from 'react-redux';
 import {login} from '../Redux/slice/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {StackNavigationProp} from '@react-navigation/stack';
-
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Signup'>;
 
 const Signup: React.FC = () => {
@@ -31,6 +31,7 @@ const Signup: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -174,17 +175,6 @@ const Signup: React.FC = () => {
       setIsLoading(false);
     }
   };
-  const renderDigitBoxes = () => {
-    const boxes = [];
-    for (let i = 0; i < 6; i++) {
-      boxes.push(
-        <View key={i} style={styles.digitBox}>
-          <Text style={styles.digitText}>{otp[i] || ''}</Text>
-        </View>,
-      );
-    }
-    return boxes;
-  };
 
   const clearError = (field: keyof typeof errors) => {
     if (errors[field]) {
@@ -237,20 +227,35 @@ const Signup: React.FC = () => {
           ) : null}
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={text => {
-              setPassword(text);
-              clearError('password');
-            }}
-            secureTextEntry
-            style={[styles.input, errors.password ? styles.inputError : null]}
-            placeholder="Entre a Password"
-          />
-          {errors.password ? (
-            <Text style={styles.errorText}>{errors.password}</Text>
-          ) : null}
-
+          <View>
+            <View style={styles.PassPosition}>
+              <TextInput
+                value={password}
+                onChangeText={text => {
+                  setPassword(text);
+                  clearError('password');
+                }}
+                secureTextEntry={!showPassword}
+                style={[
+                  styles.input,
+                  errors.password ? styles.inputError : null,
+                  {flex: 1},
+                ]}
+                placeholder="Enter a Password"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Icon
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={24}
+                  color="gray"
+                  style={{marginLeft: 10}}
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.password ? (
+              <Text style={styles.errorText}>{errors.password}</Text>
+            ) : null}
+          </View>
           <Text style={styles.label}>Confirm Password</Text>
           <TextInput
             value={confirmPassword}
@@ -362,6 +367,10 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 20,
+  },
+  PassPosition: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,

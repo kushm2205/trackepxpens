@@ -128,7 +128,6 @@ const PersonalExpensesScreen: React.FC = () => {
   );
 };
 
-// Helper functions for category icons and colors
 const getCategoryIcon = (category: string) => {
   switch (category.toLowerCase()) {
     case 'food':
