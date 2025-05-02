@@ -83,7 +83,6 @@ export const fetchGroups = createAsyncThunk<
     console.log(groupsList, '', Timestamp.now());
     return groupsList;
   } catch (error) {
-    console.error('Error fetching groups:', error);
     return rejectWithValue('Failed to fetch groups');
   }
 });

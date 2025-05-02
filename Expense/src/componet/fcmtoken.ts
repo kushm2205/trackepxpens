@@ -1,7 +1,7 @@
 import messaging from '@react-native-firebase/messaging';
 import {Alert, PermissionsAndroid, Platform} from 'react-native';
 import firestore, {doc, updateDoc} from '@react-native-firebase/firestore';
-
+import {ToastAndroid} from 'react-native';
 export const requestNotificationPermission = async () => {
   if (Platform.OS === 'android') {
     try {
@@ -51,12 +51,9 @@ export const getAndSaveFCMToken = async (userId: string) => {
 export const setupForegroundNotifications = () => {
   return messaging().onMessage(async remoteMessage => {
     console.log('Foreground notification received:', remoteMessage);
-
-    Alert.alert(
-      remoteMessage.notification?.title || 'New Notification',
-      remoteMessage.notification?.body || '',
-      [{text: 'OK'}],
-    );
+    const title = remoteMessage.notification?.title || 'New Notification';
+    const body = remoteMessage.notification?.body || '';
+    ToastAndroid.show(`${title}: ${body}`, ToastAndroid.SHORT);
   });
 };
 

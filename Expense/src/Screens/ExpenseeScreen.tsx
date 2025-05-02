@@ -8,6 +8,7 @@ import {
   Modal,
   FlatList,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {calculateShares} from '../utils/Expenssutils';
 import {useSelector, useDispatch} from 'react-redux';
@@ -37,7 +38,7 @@ const AddExpenseScreen: React.FC = () => {
   const {selectedGroup, memberNames, loading, error} = useSelector(
     (state: RootState) => state.group,
   );
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState<string | null>(null);
@@ -60,14 +61,30 @@ const AddExpenseScreen: React.FC = () => {
     }
   }, [dispatch, selectedGroup, memberNames]);
 
-  if (loading || !selectedGroup) {
-    return <Text>Loading...</Text>;
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4CBB9B" />
+        <Text>Loading group data...</Text>
+      </View>
+    );
   }
 
   if (error) {
     return <Text>Error: {error}</Text>;
   }
-
+  if (
+    !selectedGroup ||
+    !selectedGroup.members ||
+    selectedGroup.members.length === 0
+  ) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4CBB9B" />
+        <Text>No group data available or group has no members</Text>
+      </View>
+    );
+  }
   const calculateBalances = () => {
     const amt = parseFloat(amount);
     const share = amt / splitBetween.length;
@@ -88,7 +105,7 @@ const AddExpenseScreen: React.FC = () => {
       Alert.alert('Error', 'Please fill all fields.');
       return;
     }
-
+    setIsSubmitting(true);
     try {
       await addExpense(
         groupId,
@@ -119,6 +136,8 @@ const AddExpenseScreen: React.FC = () => {
     } catch (err) {
       console.error('Error adding expense:', err);
       Alert.alert('Error', 'Failed to add expense.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -182,8 +201,13 @@ const AddExpenseScreen: React.FC = () => {
 
       <TouchableOpacity
         style={styles.submitButton}
-        onPress={handleAddExpenseSubmit}>
-        <Text style={styles.submitButtonText}>Add Expense</Text>
+        onPress={handleAddExpenseSubmit}
+        disabled={isSubmitting}>
+        {isSubmitting ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={styles.submitButtonText}>Add Expense</Text>
+        )}
       </TouchableOpacity>
 
       <Modal visible={paidByModalVisible} transparent animationType="slide">
@@ -206,7 +230,7 @@ const AddExpenseScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={() => setPaidByModalVisible(false)}>
-            <Text>Close</Text>
+            <Text style={styles.modalCloseText}>Close</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -241,7 +265,7 @@ const AddExpenseScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={() => setSplitBetweenModalVisible(false)}>
-            <Text style={styles.modalCloseButton}>Close</Text>
+            <Text style={styles.modalCloseText}>Close</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -273,7 +297,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 2,
     backgroundColor: '#ffff',
     padding: 10,
     borderRadius: 10,
@@ -296,12 +320,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   modalContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     flex: 1,
     borderRadius: 15,
     padding: 20,
-    marginTop: '100%',
-    maxHeight: 300,
+    marginTop: '97%',
   },
   modalItem: {
     padding: 15,
@@ -311,17 +334,24 @@ const styles = StyleSheet.create({
   selectedModalItem: {
     backgroundColor: '#3ff',
     opacity: 0.8,
+    borderRadius: 10,
+    marginBottom: 5,
   },
   modalCloseText: {
-    fontSize: 16,
-    color: '#29846A',
-    fontWeight: '500',
+    color: 'grey',
+    fontWeight: 700,
   },
   modalCloseButton: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: '#f1f1f1',
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: '5%',
+    borderWidth: 1,
+    borderColor: '#33FFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
 });

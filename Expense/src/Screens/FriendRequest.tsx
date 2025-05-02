@@ -12,6 +12,7 @@ import {
   Linking,
   StyleSheet,
   ActivityIndicator,
+  ToastAndroid,
 } from 'react-native';
 import Contacts from 'react-native-contacts';
 import auth from '@react-native-firebase/auth';
@@ -116,7 +117,7 @@ const FriendRequestScreen = ({navigation}: any) => {
       name: docSnap.data().name,
       phone: normalizePhoneNumber(docSnap.data().phone),
       photo: docSnap.data().profilePicture || '',
-      isFirebaseUser: true, // Mark as app user
+      isFirebaseUser: true,
     }));
 
     const results: any[] = [];
@@ -203,8 +204,13 @@ const FriendRequestScreen = ({navigation}: any) => {
         photo: friend.photo || '',
         createdAt: new Date().toISOString(),
       });
-
-      Alert.alert('Success', 'Friend added successfully!');
+      if (Platform.OS === 'ios') {
+        Alert.alert('Success', 'Friend added successfully!');
+        navigation.goBack();
+      } else {
+        ToastAndroid.show('Group Created Successfully', ToastAndroid.SHORT);
+        navigation.goBack();
+      }
       setExistingFriends(prev => [...prev, friendId]);
     } catch (error) {
       console.error('Error adding friend:', error);
@@ -286,7 +292,11 @@ const FriendRequestScreen = ({navigation}: any) => {
       ) : (
         <FlatList
           data={contactResults}
-          keyExtractor={item => item.phone || item.userId}
+          keyExtractor={item =>
+            item.userId
+              ? item.userId
+              : `contact-${normalizePhoneNumber(item.phone)}-${item.name}`
+          }
           renderItem={renderContact}
           contentContainerStyle={styles.listContainer}
         />

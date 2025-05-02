@@ -15,7 +15,6 @@ import {useSelector} from 'react-redux';
 import {db} from '../services/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {AuthState, ActivityItem} from '../types/types';
-
 type ActivityTab = 'all' | 'personal' | 'group' | 'friend';
 
 const ActivityScreen = () => {

@@ -183,7 +183,7 @@ const GroupScreen = () => {
   if (authState.loading) {
     return (
       <View style={styles.authContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#4BBC9B" />
         <Text style={styles.statusText}>Checking authentication...</Text>
       </View>
     );
@@ -211,7 +211,7 @@ const GroupScreen = () => {
         {loader || loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4CBB9B" />
-            <Text style={styles.statusText}>Loading groups...</Text>
+            <Text style={styles.statusText}>Loading groups..</Text>
           </View>
         ) : null}
         {error && (
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   buttonStyle: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4BBC9B',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,

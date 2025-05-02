@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import {useSelector} from 'react-redux';
 import {RootState} from '../Redux/store';
@@ -124,7 +126,12 @@ const EditExpenseScreen: React.FC = () => {
             try {
               const expenseRef = doc(db, 'expenses', expenseId);
               await deleteDoc(expenseRef);
-              Alert.alert('Success', 'Expense deleted successfully');
+              Platform.OS === 'ios'
+                ? Alert.alert('Success', 'Expense deleted successfully')
+                : ToastAndroid.show(
+                    'Expense deleted Successfully',
+                    ToastAndroid.SHORT,
+                  );
               navigation.goBack();
             } catch (error) {
               console.error('Error deleting expense:', error);

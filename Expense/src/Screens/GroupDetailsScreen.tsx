@@ -185,6 +185,12 @@ const GroupDetailsScreen: React.FC = () => {
               });
 
               await batch.commit();
+
+              // Reset all balance states
+              setExpenses([]);
+              setMemberBalances([]);
+              setUserTransactions([]);
+              setTotalBalance(0);
             } catch (error) {
               console.error('Error settling up:', error);
               Alert.alert('Error', 'Failed to settle up. Please try again.');
@@ -194,7 +200,6 @@ const GroupDetailsScreen: React.FC = () => {
       ],
     );
   };
-
   const renderExpenseItem = ({item}: {item: Expense}) => {
     const formattedDate = format(item.createdAt, 'MMM dd, yyyy');
     const paidByName = memberNames[item.paidBy] || item.paidBy;
@@ -621,6 +626,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     overflow: 'hidden',
+    height: 50,
   },
   tabButton: {
     flex: 1,

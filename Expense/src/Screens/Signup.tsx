@@ -33,6 +33,7 @@ const Signup: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [phone, setPhone] = useState('');
@@ -228,7 +229,7 @@ const Signup: React.FC = () => {
 
           <Text style={styles.label}>Password</Text>
           <View>
-            <View style={styles.PassPosition}>
+            <View style={styles.passwordInputContainer}>
               <TextInput
                 value={password}
                 onChangeText={text => {
@@ -237,18 +238,18 @@ const Signup: React.FC = () => {
                 }}
                 secureTextEntry={!showPassword}
                 style={[
-                  styles.input,
+                  styles.passwordInput,
                   errors.password ? styles.inputError : null,
-                  {flex: 1},
                 ]}
                 placeholder="Enter a Password"
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity
+                style={styles.eyeIconContainer}
+                onPress={() => setShowPassword(!showPassword)}>
                 <Icon
                   name={showPassword ? 'eye-off' : 'eye'}
                   size={24}
                   color="gray"
-                  style={{marginLeft: 10}}
                 />
               </TouchableOpacity>
             </View>
@@ -257,22 +258,35 @@ const Signup: React.FC = () => {
             ) : null}
           </View>
           <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            value={confirmPassword}
-            onChangeText={text => {
-              setConfirmPassword(text);
-              clearError('confirmPassword');
-            }}
-            secureTextEntry
-            style={[
-              styles.input,
-              errors.confirmPassword ? styles.inputError : null,
-            ]}
-            placeholder="Entre A Confirm Password"
-          />
-          {errors.confirmPassword ? (
-            <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-          ) : null}
+          <View>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                value={confirmPassword}
+                onChangeText={text => {
+                  setConfirmPassword(text);
+                  clearError('confirmPassword');
+                }}
+                secureTextEntry={!showConfirmPassword}
+                style={[
+                  styles.passwordInput,
+                  errors.confirmPassword ? styles.inputError : null,
+                ]}
+                placeholder="Entre A Confirm Password"
+              />
+              <TouchableOpacity
+                style={styles.eyeIconContainer}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                <Icon
+                  name={showConfirmPassword ? 'eye-off' : 'eye'}
+                  size={24}
+                  color="gray"
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.confirmPassword ? (
+              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+            ) : null}
+          </View>
 
           <Text style={styles.label}>Phone Number</Text>
           <View style={styles.phoneView}>
@@ -371,6 +385,27 @@ const styles = StyleSheet.create({
   PassPosition: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  passwordInputContainer: {
+    position: 'relative',
+    width: '90%',
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginBottom: 10,
+    fontSize: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#f9f9f9',
+    width: '100%',
+    paddingRight: 45,
+  },
+  eyeIconContainer: {
+    position: 'absolute',
+    right: 10,
+    top: 12,
   },
   title: {
     fontSize: 24,

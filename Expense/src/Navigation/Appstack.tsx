@@ -17,6 +17,7 @@ import PieChartScreen from '../Screens/Piechart';
 import PiChartFriend from '../Screens/PieChartFriend';
 import {RootStackParamList} from '../types/types';
 import {NavigationContainer} from '@react-navigation/native';
+
 const Stack = createStackNavigator<RootStackParamList>();
 export const AppStack = () => (
   <Stack.Navigator>
@@ -39,6 +40,7 @@ export const AppStack = () => (
     <Stack.Screen name="AddFriendExpense" component={AddFriendExpense} />
     <Stack.Screen name="FriendRequest" component={FriendRequest} />
     <Stack.Screen name="GroupDetailsScreen" component={GroupDetailsScreen} />
+
     <Stack.Screen name="EditExpense" component={EditExpenseScreen} />
 
     <Stack.Screen
@@ -52,6 +54,7 @@ export const AppStack = () => (
       component={ChatScreenFriend}
       options={{title: 'Chat', headerShown: false}}
     />
+
     <Stack.Screen
       name="FriendExpenseDetails"
       component={FriendExpenseDetails}

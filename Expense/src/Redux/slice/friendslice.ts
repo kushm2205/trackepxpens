@@ -92,7 +92,7 @@ export const addFriend = createAsyncThunk(
 
       return friend;
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to add friend');
+      return rejectWithValue(error.message);
     }
   },
 );
@@ -101,8 +101,7 @@ export const fetchFriends = createAsyncThunk(
   'friends/fetchFriends',
   async (userId, {dispatch, rejectWithValue, getState}) => {
     try {
-      console.log('Fetch_Friends___');
-      console.log('User_ID', userId);
+      console.log('UserID', userId);
       if (!userId) {
         console.log('userId is null');
         return [];

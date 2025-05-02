@@ -246,8 +246,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   input: {
-    borderWidth: 1,
-    borderColor: 'grey',
+    borderWidth: 2,
+    borderColor: 'black',
     padding: 10,
     marginTop: 5,
     borderRadius: 5,

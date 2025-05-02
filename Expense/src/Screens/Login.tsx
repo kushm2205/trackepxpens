@@ -182,25 +182,28 @@ const Login: React.FC = () => {
         {errors.email ? (
           <Text style={styles.errorText}>{errors.email}</Text>
         ) : null}
-
         <Text style={styles.label}>Password</Text>
-        <View style={styles.PassPosition}>
+        <View style={styles.inputWithIcon}>
           <TextInput
             value={password}
             onChangeText={handlePasswordChange}
             secureTextEntry={!showPassword}
-            style={[styles.input, errors.password ? styles.inputError : null]}
             placeholder="Enter your password"
+            style={styles.textInput}
+            placeholderTextColor="#999"
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
             <Icon
               name={showPassword ? 'eye-off' : 'eye'}
               size={24}
               color="gray"
-              style={{marginLeft: 10}}
             />
           </TouchableOpacity>
         </View>
+        {errors.password ? (
+          <Text style={styles.errorText}>{errors.password}</Text>
+        ) : null}
+
         {errors.password ? (
           <Text style={styles.errorText}>{errors.password}</Text>
         ) : null}
@@ -281,6 +284,24 @@ const styles = StyleSheet.create({
     color: '#4CBB9B',
     fontSize: 16,
   },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    paddingHorizontal: 15,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 10,
+    width: '90%',
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 10,
+    color: '#000',
+  },
+
   header: {
     backgroundColor: '#4CBB9B',
     paddingVertical: 40,

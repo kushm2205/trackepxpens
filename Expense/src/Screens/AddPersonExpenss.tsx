@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ToastAndroid,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {AppDispatch, RootState} from '../redux/store';
@@ -74,12 +75,15 @@ const AddPersonalExpenseScreen: React.FC = () => {
         }),
       );
 
-      // Check if the action was fulfilled
       if (addPersonalExpense.fulfilled.match(resultAction)) {
-        Alert.alert('Success', 'Personal expense added successfully');
+        Platform.OS === 'ios'
+          ? Alert.alert('Success', 'Personal expense added successfully')
+          : ToastAndroid.show(
+              'successfully added personal expenss',
+              ToastAndroid.SHORT,
+            );
         navigation.goBack();
       } else {
-        // If it was rejected, we can access the error
         const error = resultAction.payload;
         Alert.alert(
           'Error',

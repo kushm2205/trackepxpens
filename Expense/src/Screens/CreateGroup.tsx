@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
+  ToastAndroid,
 } from 'react-native';
 import Contacts from 'react-native-contacts';
 import {useDispatch, useSelector} from 'react-redux';
@@ -96,9 +97,8 @@ const CreateGroup = () => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, users, deviceContacts, dispatch]);
   const sendSMSInvitation = (phoneNumber: string, groupName: string) => {
-    const message = `Hi! I'm inviting you to join our group "${groupName}" on SplitEase. Download the app here: [APP_DOWNLOAD_LINK]`;
+    const message = `Hi! I'm inviting you to join our group "${groupName}" on Pocket Tracker. Download the app here: [APP_DOWNLOAD_LINK]`;
 
-    // Remove non-numeric characters from phone number
     const cleanNumber = phoneNumber.replace(/\D/g, '');
 
     if (Platform.OS === 'android') {
@@ -171,7 +171,6 @@ const CreateGroup = () => {
     setIsCreating(true);
 
     try {
-      // Filter out non-app users (contacts without Firebase IDs)
       const appUserMembers = selectedMembers.filter(
         memberId =>
           users.some(user => user.id === memberId) ||
@@ -191,12 +190,16 @@ const CreateGroup = () => {
           ),
         }),
       );
-
-      Alert.alert(
-        'Group Created',
-        'Group created successfully! Invitations sent to non-app users.',
-        [{text: 'OK', onPress: () => navigation.goBack()}],
-      );
+      if (Platform.OS === 'ios') {
+        Alert.alert(
+          'Group Created',
+          'Group created successfully! Invitations sent to non-app users.',
+          [{text: 'OK', onPress: () => navigation.goBack()}],
+        );
+      } else {
+        ToastAndroid.show('Group Created Successfully', ToastAndroid.SHORT);
+        navigation.goBack();
+      }
     } catch (error) {
       console.error('Error creating group:', error);
     } finally {

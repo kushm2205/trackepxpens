@@ -8,6 +8,8 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {Friend, RootStackParamList} from '../types/types';
@@ -111,8 +113,9 @@ const AddFriendExpense = () => {
               });
 
               await batch.commit();
-
-              Alert.alert('Success', 'All expenses have been cleared');
+              Platform.OS == 'ios'
+                ? Alert.alert('Success', 'All expenses have been cleared')
+                : ToastAndroid.show('Success', ToastAndroid.SHORT);
             } catch (error) {
               console.error('Error settling up:', error);
               Alert.alert('Error', 'Failed to settle up. Please try again.');

@@ -12,6 +12,7 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
+  ToastAndroid,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {RootState, AppDispatch} from '../Redux/store';
@@ -41,7 +42,8 @@ const AccountScreen: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
-
+  const [isGuideVisible, setIsGuideVisible] = useState(false);
+  const [currentGuideImage, setCurrentGuideImage] = useState<number>(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -49,7 +51,23 @@ const AccountScreen: React.FC = () => {
   const [currentField, setCurrentField] = useState<
     'name' | 'email' | 'phone' | null
   >(null);
+  const guideImages = [
+    {
+      id: 1,
+      uri: require('../assets/Groups.png'),
+      title: 'Group Screen',
+      description:
+        'Left swipe goto chat screen and right swipe delete the group.',
+    },
+    {
+      id: 2,
+      uri: require('../assets/Friends.png'),
 
+      title: 'Friend Screen',
+      description:
+        'Left swipe goto chat screen and right swipe delete the Friend.',
+    },
+  ];
   useEffect(() => {
     if (userId) {
       fetchUserData();
@@ -142,7 +160,82 @@ const AccountScreen: React.FC = () => {
     }
     setIsModalVisible(true);
   };
+  const renderGuideModal = () => {
+    return (
+      <ScrollView>
+        <Modal
+          visible={isGuideVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setIsGuideVisible(false)}>
+          <View style={styles.guideModalOverlay}>
+            <View style={styles.guideModalContainer}>
+              <View style={styles.guideHeader}>
+                <Text style={styles.guideTitle}>User Guide</Text>
+                <TouchableOpacity onPress={() => setIsGuideVisible(false)}>
+                  <Text style={styles.closeButton}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
+              <View style={styles.guideImageContainer}>
+                <Image
+                  source={guideImages[currentGuideImage].uri}
+                  style={styles.guideImage}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <View style={styles.guideTextContainer}>
+                <Text style={styles.guideImageTitle}>
+                  {guideImages[currentGuideImage].title}
+                </Text>
+                <Text style={styles.guideImageDescription}>
+                  {guideImages[currentGuideImage].description}
+                </Text>
+              </View>
+
+              <View style={styles.guidePagination}>
+                <TouchableOpacity
+                  onPress={() =>
+                    setCurrentGuideImage(prev => Math.max(0, prev - 1))
+                  }
+                  disabled={currentGuideImage === 0}>
+                  <Text
+                    style={[
+                      styles.paginationButton,
+                      currentGuideImage === 0 && styles.disabledButton,
+                    ]}>
+                    Previous
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={styles.pageIndicator}>
+                  {currentGuideImage + 1} / {guideImages.length}
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    setCurrentGuideImage(prev =>
+                      Math.min(guideImages.length - 1, prev + 1),
+                    )
+                  }
+                  disabled={currentGuideImage === guideImages.length - 1}>
+                  <Text
+                    style={[
+                      styles.paginationButton,
+                      currentGuideImage === guideImages.length - 1 &&
+                        styles.disabledButton,
+                    ]}>
+                    Next
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </ScrollView>
+    );
+  };
   const saveFieldEdit = async () => {
     if (!userId || !currentField) return;
 
@@ -207,8 +300,9 @@ const AccountScreen: React.FC = () => {
 
       dispatch(login({userId, email, photoURL}));
       await AsyncStorage.setItem('profilePicture', photoURL ?? '');
-
-      Alert.alert('Success', 'Profile updated successfully!');
+      Platform.OS === 'android'
+        ? ToastAndroid.show('Profile updated successfully', ToastAndroid.SHORT)
+        : Alert.alert('update the profile successfully');
     } catch (error) {
       console.error('Error updating profile:', error);
     }
@@ -370,7 +464,14 @@ const AccountScreen: React.FC = () => {
             <Text style={styles.editIcon}>✏️</Text>
           </TouchableOpacity>
         </View>
-
+        <TouchableOpacity
+          style={styles.guideButton}
+          onPress={() => {
+            setCurrentGuideImage(0);
+            setIsGuideVisible(true);
+          }}>
+          <Text style={styles.guideButtonText}>View User Guide</Text>
+        </TouchableOpacity>
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.updateButton}
@@ -389,7 +490,7 @@ const AccountScreen: React.FC = () => {
           </Text>
         </View>
       </ScrollView>
-
+      {renderGuideModal()}
       {renderEditModal()}
     </View>
   );
@@ -648,5 +749,92 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  guideButton: {
+    backgroundColor: '#4BBC9B',
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+    marginHorizontal: 15,
+    elevation: 2,
+  },
+  guideButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  guideModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guideModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    width: '90%',
+    overflow: 'hidden',
+  },
+  guideHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
+  },
+  guideTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#29846A',
+  },
+  guideImageContainer: {
+    height: 470,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+  },
+  guideImage: {
+    width: '100%',
+    height: '100%',
+  },
+  guideTextContainer: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
+  },
+  guideImageTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#4BBC9B',
+  },
+  guideImageDescription: {
+    fontSize: 16,
+    color: 'grey',
+    fontWeight: '400',
+  },
+  guidePagination: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eaeaea',
+  },
+  paginationButton: {
+    color: '#29846A',
+    fontSize: 16,
+    fontWeight: '500',
+    padding: 10,
+  },
+  disabledButton: {
+    color: '#cccccc',
+  },
+  pageIndicator: {
+    fontSize: 16,
+    color: '#666',
   },
 });
