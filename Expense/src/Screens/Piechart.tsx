@@ -78,22 +78,24 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route, navigation}) => {
       {userChartData && userChartData.length > 0 ? (
         <View style={styles.chartContainer}>
           <Text style={styles.sectionTitle}>Your Settlement Status</Text>
-          <PieChart
-            data={userChartData}
-            width={screenWidth - 50}
-            height={220}
-            chartConfig={{
-              backgroundColor: '#ffffff',
-              backgroundGradientFrom: '#ffffff',
-              backgroundGradientTo: '#ffffff',
-              decimalPlaces: 2,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            }}
-            accessor="amount"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            hasLegend={true}
-          />
+          <ScrollView horizontal>
+            <PieChart
+              data={userChartData}
+              width={screenWidth - 50}
+              height={220}
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 2,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              }}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              hasLegend={true}
+            />
+          </ScrollView>
         </View>
       ) : (
         <Text style={styles.noDataText}>No personal balances to display</Text>
@@ -124,23 +126,25 @@ const PieChartScreen: React.FC<PieChartScreenProps> = ({route, navigation}) => {
       {chartData && chartData.length > 0 ? (
         <View style={styles.chartContainer}>
           <Text style={styles.sectionTitle}>Group Expense Distribution</Text>
-          <PieChart
-            data={chartData}
-            width={screenWidth - 50}
-            height={220}
-            chartConfig={{
-              backgroundColor: '#ffffff',
-              backgroundGradientFrom: '#ffffff',
-              backgroundGradientTo: '#ffffff',
-              decimalPlaces: 2,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            }}
-            accessor="amount"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            absolute
-            hasLegend={true}
-          />
+          <ScrollView horizontal>
+            <PieChart
+              data={chartData}
+              width={screenWidth - 50}
+              height={220}
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 2,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              }}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              absolute
+              hasLegend={true}
+            />
+          </ScrollView>
         </View>
       ) : (
         <Text style={styles.noDataText}>No expense data available</Text>

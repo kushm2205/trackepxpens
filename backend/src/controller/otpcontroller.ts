@@ -7,7 +7,6 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
 
   if (!email) {
     res.status(400).json({ message: "Email is required" });
-    return;
   }
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -19,7 +18,7 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       { upsert: true, new: true }
     );
 
-    console.log("====================================");
+    console.log("===================================");
     console.log(new1);
     console.log("====================================");
     console.log(`Generated OTP for ${email}: ${otp}`);

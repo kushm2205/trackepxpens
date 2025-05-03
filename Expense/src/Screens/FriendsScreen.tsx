@@ -18,7 +18,7 @@ import {
   selectFriends,
   selectFriendsLoading,
   removeFriend,
-  addFriend,
+  addFriendToState,
 } from '../Redux/slice/friendslice';
 import {Friend, RootStackParamList} from '../types/types';
 import {
@@ -84,23 +84,94 @@ const FriendsScreen = () => {
   useEffect(() => {
     if (!userId) return;
 
-    const unsubscribeFriends = onSnapshot(
+    const unsubscribeFriendAdded = onSnapshot(
       query(collection(db, 'friends'), where('userId', '==', userId)),
-      snapshot => {
-        snapshot.docChanges().forEach(change => {
-          const friendData = change.doc.data() as Friend;
+      async snapshot => {
+        for (const change of snapshot.docChanges()) {
+          if (change.type === 'added') {
+            const friendData = change.doc.data() as any;
+            const friendId = friendData.friendId;
 
-          if (
-            change.type === 'added' &&
-            !friends.some(f => f.userId === friendData.userId)
-          ) {
-            dispatch(addFriend(friendData));
+            const friendExists = friends.some(f => f.userId === friendId);
+
+            if (!friendExists) {
+              try {
+                const userQuery = query(
+                  collection(db, 'users'),
+                  where('userId', '==', friendId),
+                );
+                const userSnapshot = await getDocs(userQuery);
+
+                if (!userSnapshot.empty) {
+                  const userData = userSnapshot.docs[0].data();
+
+                  dispatch(
+                    addFriendToState({
+                      userId: friendId,
+                      name: userData.name || friendData.name,
+                      phone: userData.phone || friendData.phone || '',
+                      photo: userData.photo || friendData.photo || '',
+                    } as Friend),
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  'Error fetching user data for new friend:',
+                  error,
+                );
+              }
+            }
           }
-        });
+        }
       },
     );
 
-    return () => unsubscribeFriends();
+    const unsubscribeFriendTarget = onSnapshot(
+      query(collection(db, 'friends'), where('friendId', '==', userId)),
+      async snapshot => {
+        for (const change of snapshot.docChanges()) {
+          if (change.type === 'added') {
+            const friendData = change.doc.data() as any;
+            const friendId = friendData.userId;
+
+            const friendExists = friends.some(f => f.userId === friendId);
+
+            if (!friendExists) {
+              try {
+                const userQuery = query(
+                  collection(db, 'users'),
+                  where('userId', '==', friendId),
+                );
+                const userSnapshot = await getDocs(userQuery);
+
+                if (!userSnapshot.empty) {
+                  const userData = userSnapshot.docs[0].data();
+
+                  dispatch(
+                    addFriendToState({
+                      userId: friendId,
+                      name: userData.name || friendData.name,
+                      phone: userData.phone || friendData.phone || '',
+                      photo: userData.photo || friendData.photo || '',
+                    } as Friend),
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  'Error fetching user data for new friend:',
+                  error,
+                );
+              }
+            }
+          }
+        }
+      },
+    );
+
+    return () => {
+      unsubscribeFriendAdded();
+      unsubscribeFriendTarget();
+    };
   }, [userId, dispatch, friends]);
 
   useEffect(() => {
@@ -161,12 +232,14 @@ const FriendsScreen = () => {
       setTotalBalance(total);
     };
 
+    // Set up listeners for expense changes
     const unsubscribeFriendExpenses = onSnapshot(
       collection(db, 'friend_expenses'),
       snapshot => {
         const friendExpenses = snapshot.docs.map(doc => doc.data());
 
-        onSnapshot(collection(db, 'expenses'), groupSnapshot => {
+        // Get group expenses
+        getDocs(collection(db, 'expenses')).then(groupSnapshot => {
           const groupExpenses = groupSnapshot.docs.map(doc => doc.data());
           calculateBalances(friendExpenses, groupExpenses);
         });
@@ -178,7 +251,8 @@ const FriendsScreen = () => {
       snapshot => {
         const groupExpenses = snapshot.docs.map(doc => doc.data());
 
-        onSnapshot(collection(db, 'friend_expenses'), friendSnapshot => {
+        // Get friend expenses
+        getDocs(collection(db, 'friend_expenses')).then(friendSnapshot => {
           const friendExpenses = friendSnapshot.docs.map(doc => doc.data());
           calculateBalances(friendExpenses, groupExpenses);
         });
@@ -212,8 +286,10 @@ const FriendsScreen = () => {
 
               const batch = writeBatch(db);
 
-              const friendDocRef = doc(db, 'friends', `${userId}_${friendId}`);
-              batch.delete(friendDocRef);
+              const friendDocRef1 = doc(db, 'friends', `${userId}_${friendId}`);
+              const friendDocRef2 = doc(db, 'friends', `${friendId}_${userId}`);
+              batch.delete(friendDocRef1);
+              batch.delete(friendDocRef2);
 
               const expensesRef = collection(db, 'friend_expenses');
               const q = query(
@@ -231,6 +307,7 @@ const FriendsScreen = () => {
 
               await batch.commit();
 
+              // Update Redux store
               dispatch(removeFriend(friend));
             } catch (error) {
               console.error('Deletion error:', error);

@@ -11,6 +11,8 @@ import {
   getDocs,
   DocumentData,
   QuerySnapshot,
+  doc,
+  setDoc,
 } from 'firebase/firestore';
 import {db} from '../../services/firestore';
 
@@ -25,6 +27,7 @@ const initialState: FriendsState = {
   loading: false,
   error: null,
 };
+
 export const addFriend = createAsyncThunk(
   'friends/addFriend',
   async (
@@ -60,7 +63,7 @@ export const addFriend = createAsyncThunk(
       const friendPhone = friendUserData.phone || friend.phone || '';
       const friendPhoto = friendUserData.photo || friend.photo || '';
 
-      await addDoc(collection(db, 'friends'), {
+      await setDoc(doc(db, 'friends', `${userId}_${friendId}`), {
         userId: userId,
         friendId: friendId,
         name: friendName,
@@ -81,7 +84,7 @@ export const addFriend = createAsyncThunk(
 
       const currentUserData = currentUserSnapshot.docs[0].data();
 
-      await addDoc(collection(db, 'friends'), {
+      await setDoc(doc(db, 'friends', `${friendId}_${userId}`), {
         userId: friendId,
         friendId: userId,
         name: currentUserData.name || 'User',
@@ -90,7 +93,12 @@ export const addFriend = createAsyncThunk(
         createdAt: serverTimestamp(),
       });
 
-      return friend;
+      return {
+        userId: friendId,
+        name: friendName,
+        phone: friendPhone,
+        photo: friendPhoto,
+      } as Friend;
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
@@ -99,9 +107,8 @@ export const addFriend = createAsyncThunk(
 
 export const fetchFriends = createAsyncThunk(
   'friends/fetchFriends',
-  async (userId, {dispatch, rejectWithValue, getState}) => {
+  async (userId: string, {dispatch, rejectWithValue}) => {
     try {
-      console.log('UserID', userId);
       if (!userId) {
         console.log('userId is null');
         return [];
@@ -117,7 +124,7 @@ export const fetchFriends = createAsyncThunk(
         where('friendId', '==', userId),
       );
 
-      return new Promise<void>(async (resolve, reject) => {
+      return new Promise<Friend[]>(async (resolve, reject) => {
         let allFriends: Friend[] = [];
 
         const processSnapshot = async (
@@ -167,12 +174,11 @@ export const fetchFriends = createAsyncThunk(
               index === self.findIndex(f => f.userId === friend.userId),
           );
 
-          console.log('Realtime friends update:', uniqueFriends);
-          dispatch(setFriends(uniqueFriends));
-          resolve();
+          console.log('Fetched friends:', uniqueFriends);
+          resolve(uniqueFriends);
         } catch (error) {
-          console.error('error fetching friends:', error, error);
-          reject(rejectWithValue(error || 'Error fetching friends'));
+          console.error('error fetching friends:', error);
+          reject(error);
         }
       });
     } catch (error: any) {
@@ -181,6 +187,7 @@ export const fetchFriends = createAsyncThunk(
     }
   },
 );
+
 const friendsSlice = createSlice({
   name: 'friends',
   initialState,
@@ -189,7 +196,14 @@ const friendsSlice = createSlice({
       state.friends = action.payload;
       state.loading = false;
     },
-
+    addFriendToState: (state, action: PayloadAction<Friend>) => {
+      const exists = state.friends.some(
+        friend => friend.userId === action.payload.userId,
+      );
+      if (!exists) {
+        state.friends.push(action.payload);
+      }
+    },
     removeFriend: (state, action: PayloadAction<Friend>) => {
       state.friends = state.friends.filter(
         friend =>
@@ -200,23 +214,30 @@ const friendsSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-
       .addCase(fetchFriends.pending, state => {
         state.loading = true;
         state.error = null;
+      })
+      .addCase(fetchFriends.fulfilled, (state, action) => {
+        state.loading = false;
+        state.friends = action.payload;
       })
       .addCase(fetchFriends.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
-
       .addCase(addFriend.pending, state => {
         state.loading = true;
         state.error = null;
       })
       .addCase(addFriend.fulfilled, (state, action: PayloadAction<Friend>) => {
         state.loading = false;
-        state.friends.push(action.payload);
+        const exists = state.friends.some(
+          friend => friend.userId === action.payload.userId,
+        );
+        if (!exists) {
+          state.friends.push(action.payload);
+        }
       })
       .addCase(addFriend.rejected, (state, action) => {
         state.loading = false;
@@ -225,7 +246,8 @@ const friendsSlice = createSlice({
   },
 });
 
-export const {setFriends, removeFriend} = friendsSlice.actions;
+export const {setFriends, addFriendToState, removeFriend} =
+  friendsSlice.actions;
 export const selectFriends = (state: RootState) => state.friends.friends;
 export const selectFriendsLoading = (state: RootState) => state.friends.loading;
 export const selectFriendsError = (state: RootState) => state.friends.error;

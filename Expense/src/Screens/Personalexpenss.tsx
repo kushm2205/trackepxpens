@@ -61,6 +61,10 @@ const PersonalExpensesScreen: React.FC = () => {
     }
   };
 
+  const totalExpenses = expenses.reduce((sum, expense) => {
+    return sum + parseFloat(expense.amount.toString());
+  }, 0);
+
   if (loading && expenses.length === 0) {
     return (
       <View style={styles.centered}>
@@ -76,6 +80,11 @@ const PersonalExpensesScreen: React.FC = () => {
         <TouchableOpacity style={styles.addButton} onPress={handleAddExpense}>
           <Ionicons name="add" size={24} color="white" />
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.totalContainer}>
+        <Text style={styles.totalLabel}>Total Expenses</Text>
+        <Text style={styles.totalAmount}>₹{totalExpenses.toFixed(2)}</Text>
       </View>
 
       {expenses.length === 0 ? (
@@ -276,6 +285,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#3bb0de',
+  },
+  totalContainer: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4BBC9B',
   },
   expenseDate: {
     fontSize: 12,

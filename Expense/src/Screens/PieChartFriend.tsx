@@ -173,22 +173,22 @@ const PiChartFriend = () => {
             All Transactions with {friend.name}
           </Text>
         </View>
-
-        <View style={styles.chartContainer}>
-          {pieChartData.length > 0 && (
-            <PieChart
-              data={pieChartData}
-              width={screenWidth}
-              height={220}
-              chartConfig={chartConfig}
-              accessor="amount"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
-            />
-          )}
-        </View>
-
+        <ScrollView horizontal>
+          <View style={styles.chartContainer}>
+            {pieChartData.length > 0 && (
+              <PieChart
+                data={pieChartData}
+                width={screenWidth}
+                height={220}
+                chartConfig={chartConfig}
+                accessor="amount"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                absolute
+              />
+            )}
+          </View>
+        </ScrollView>
         <View style={styles.summaryContainer}>
           <Text style={styles.balanceText}>{calculateBalance()}</Text>
           <Text style={styles.totalText}>

@@ -25,6 +25,7 @@ import {useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../types/types';
 import {uploadImage, getUser, updateUser} from '../services/firestore';
 import {launchImageLibrary} from 'react-native-image-picker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type AccountScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -323,7 +324,7 @@ const AccountScreen: React.FC = () => {
       <Modal
         visible={isModalVisible}
         transparent={true}
-        animationType="none"
+        animationType="slide"
         onRequestClose={() => setIsModalVisible(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay}>
           <Animated.View
@@ -352,58 +353,61 @@ const AccountScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalContent}>
-              {currentField === 'name' && (
-                <TextInput
-                  style={styles.modalInput}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter your name"
-                  autoFocus
-                />
-              )}
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled">
+              <View style={styles.modalContent}>
+                {currentField === 'name' && (
+                  <TextInput
+                    style={styles.modalInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Enter your name"
+                    autoFocus
+                  />
+                )}
 
-              {currentField === 'email' && (
-                <TextInput
-                  style={styles.modalInput}
-                  value={editEmail}
-                  onChangeText={setEditEmail}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoFocus
-                />
-              )}
+                {currentField === 'email' && (
+                  <TextInput
+                    style={styles.modalInput}
+                    value={editEmail}
+                    onChangeText={setEditEmail}
+                    placeholder="Enter your email"
+                    keyboardType="email-address"
+                    autoFocus
+                  />
+                )}
 
-              {currentField === 'phone' && (
-                <TextInput
-                  style={styles.modalInput}
-                  value={editPhone}
-                  onChangeText={setEditPhone}
-                  placeholder="Enter your phone number"
-                  keyboardType="phone-pad"
-                  autoFocus
-                />
-              )}
+                {currentField === 'phone' && (
+                  <TextInput
+                    style={styles.modalInput}
+                    value={editPhone}
+                    onChangeText={setEditPhone}
+                    placeholder="Enter your phone number"
+                    keyboardType="phone-pad"
+                    autoFocus
+                  />
+                )}
 
-              <View style={styles.modalButtonsContainer}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setIsModalVisible(false)}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={saveFieldEdit}>
-                  <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
+                <View style={styles.modalButtonsContainer}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => setIsModalVisible(false)}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={saveFieldEdit}>
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
     );
   };
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -424,7 +428,7 @@ const AccountScreen: React.FC = () => {
               style={styles.profileImage}
             />
             <View style={styles.cameraIconContainer}>
-              <Text style={styles.cameraIcon}>📷</Text>
+              <Ionicons name={'camera-outline'} size={30} color={'black'} />
             </View>
           </TouchableOpacity>
           <Text style={styles.userName}>{name || 'Your Name'}</Text>
@@ -485,8 +489,9 @@ const AccountScreen: React.FC = () => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © 2025 YourAppName. All rights reserved. By using this app, you
-            agree to our Terms of Service and Privacy Policy.
+            © 2025 Pocket Tracker(Track-Share-Split). All rights reserved. By
+            using this app, you agree to our Terms of Service and Privacy
+            Policy.
           </Text>
         </View>
       </ScrollView>
@@ -545,7 +550,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 5,
     right: 5,
-    backgroundColor: '#29846A',
+    backgroundColor: 'grey',
+    opacity: 0.9,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -636,6 +642,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#555555',
   },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   buttonContainer: {
     flexDirection: 'column',
     padding: 20,
@@ -710,6 +720,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+    justifyContent: 'center',
   },
   modalInput: {
     borderWidth: 1,
