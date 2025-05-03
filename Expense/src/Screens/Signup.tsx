@@ -124,8 +124,11 @@ const Signup: React.FC = () => {
       Alert.alert('OTP Sent', 'Check your email for the OTP');
 
       setIsOtpSent(true);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send OTP');
+    } catch (firebaseError: any) {
+      let errorMessage = 'Failed to create account';
+      if (firebaseError.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already in use';
+      }
     } finally {
       setIsLoading(false);
     }

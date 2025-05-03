@@ -32,7 +32,7 @@ import {
 } from 'firebase/firestore';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const defaultGroupImage = require('../assets/download.jpeg');
+const defaultGroupImage = require('../assets/download.png');
 type GroupScreenProp = StackNavigationProp<RootStackParamList, 'GroupScreen'>;
 
 const GroupScreen = () => {
